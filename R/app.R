@@ -1,4 +1,3 @@
-#install.packages("topicmodels")
 #devtools::install_github("timelyportfolio/listviewer")
 #devtools::install_github("ropensci/plotly")
 #devtools::install_github("dreamRs/shinyWidgets")
@@ -14,7 +13,6 @@ library(topicmodels)
 library(dplyr)
 library(stringi)
 library(servr)
-# library(shinyTree)
 library(shinythemes)
 library(shinyWidgets)
 library(plotly)
@@ -25,8 +23,6 @@ library(shinyjs)
 
 # N gram tokenizers
 UnigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1), paste, collapse = " "), use.names = FALSE)}
-BigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1:2), paste, collapse = " "), use.names = FALSE)}
-TrigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1:3), paste, collapse = " "), use.names = FALSE)}
 
 # pre-processing using dictionary
 dictionary <- function(x, y){
@@ -34,13 +30,12 @@ dictionary <- function(x, y){
         y <- gsub(x[i,1], x[i,2], y)
       }
       return(y)
-} 
+}
 
 # pre-processing function
 preprocess <- function(text, english = F, whitespace = F, stopwords = F, number = F, punc = F, stem = F, lower = F){
   
   if(english == T){Text_corpus <- gsub('[ㄱ-힣]', '', Text_corpus)} #영어 이외의 글자를 제거하는 코드 작성 필요    /^[a-zA-Z]+$/
-  #Text_corpus <- gsub('![a-zA-Z]', '', Text_corpus)
   Text_corpus <- tm::VCorpus(tm::VectorSource(Text_corpus))
   if(whitespace == T){Text_corpus <- tm::tm_map(Text_corpus, stripWhitespace)}
   if(stopwords == T){Text_corpus <- tm::tm_map(Text_corpus, removeWords, stopwords('en'))}
@@ -51,37 +46,36 @@ preprocess <- function(text, english = F, whitespace = F, stopwords = F, number 
   
   Text_corpus <- tm::tm_map(Text_corpus, PlainTextDocument)
   
-  nGramFunction <- c(UnigramTokenizer,BigramTokenizer,TrigramTokenizer)
-  DTM <- lapply(nGramFunction, function(x) tm::DocumentTermMatrix(Text_corpus,control = list(tokenize = x)))
+  
+  DTM <- tm::DocumentTermMatrix(Text_corpus, control = list(wordLength=c(2,Inf), tokenizer = UnigramTokenizer))
   
   return(DTM)
 }
 
 
-# Define UI for application that draws a histogram
+# Rshiny Application
 runApp(shinyApp(
   ui <- (navbarPage(theme = shinythemes::shinytheme("flatly")
-                    , "NLP"
-                    , tabPanel("Connect DB"
-                             , fluidRow(column(12
-                                               , align='center'
-                                               , useShinyjs()
-                                               , textInput('ip_address', 'IP address', '', placeholder = 'ex) ???.???.???.???')
-                                               , textInput('database_schema', 'Database schema', '', placeholder = 'ex) DBName')
-                                               , textInput('user', 'User ID', '', placeholder = 'ex) Admin')
-                                               , passwordInput('password', 'Password', '', placeholder = 'ex) 1234')
-                                               , textInput('resultdb', 'Result DB', '', placeholder = 'ex) WEBAPI_CDM.results')
-                                               , textInput('cohort', 'Cohort ID', '', placeholder = 'ex) 123')
-                                               , actionButton('connect', 'Connect'))
-                                        )
-                               )
-                    
-                    , navbarMenu("Explore"
+                    , "SOCRATex"
+                    , navbarMenu("Extraction"
+                                 , tabPanel("DB Connection"
+                                            , fluidRow(column(12
+                                                              , align='center'
+                                                              , useShinyjs()
+                                                              , textInput('ip_address', 'IP address', '', placeholder = 'ex) ???.???.???.???')
+                                                              , textInput('database_schema', 'Database schema', '', placeholder = 'ex) DBName')
+                                                              , textInput('user', 'User ID', '', placeholder = 'ex) Admin')
+                                                              , passwordInput('password', 'Password', '', placeholder = 'ex) 1234')
+                                                              , textInput('resultdb', 'Result DB', '', placeholder = 'ex) WEBAPI_CDM.results')
+                                                              , textInput('cohort', 'Cohort ID', '', placeholder = 'ex) 123')
+                                                              , actionButton('connect', 'Connect'))
+                                            )
+                                 )
                                  , tabPanel("Preprocessing"
                                             , sidebarPanel(switchInput("type", "Type", value=F)
                                                            #selectInput("type", "type:", choices = noteType)
                                                            , uiOutput("typeOutput")
-                                                           , sliderInput("num", "Number of reports", min = 10, max = 2000, value = 500, step = 1)
+                                                           , sliderInput("num", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
                                                            , sliderInput("date", "Dates", min = 1990, max = 2019, value = c(2012, 2018), step = 1)
                                                            , prettyCheckbox('english', "English only", T, icon=icon("check"), plain=T)
                                                            , prettyCheckbox('whitespace', "Remove whitespace", F, icon=icon("check"), plain=T)
@@ -92,8 +86,11 @@ runApp(shinyApp(
                                                            , prettyCheckbox('lower', "To lower", F, icon=icon("check"), plain=T)
                                                            , textInput('dictionary_table', 'Dictionary table', '',  placeholder = 'ex) DBName.dbo.tableName')
                                                            , actionButton('process', 'Pre-Process')
-                                                           , width="4"))
-                                 , tabPanel('Characteristics'
+                                                           , width="2"))
+                                 )
+                    
+                    , navbarMenu("Exploration"
+                                 , tabPanel("Characteristics"
                                             , fluidRow(column(6, align='center', tableOutput("count"))
                                                        , column(6, plotlyOutput("age"))
                                                        )
@@ -101,55 +98,46 @@ runApp(shinyApp(
                                                        , column(6, plotlyOutput("date"))
                                                        )
                                  )
-                                 
-                                 , tabPanel('Correlation',
-                                            tabsetPanel(tabPanel(title = "Barplot"
-                                                                 , sidebarPanel(width=3
-                                                                                , sliderInput('word_freq', 'Word Freq', min=1, max=200, value=20, step=1)
-                                                                                , radioButtons('bar_ngram', 'Choose N-gram', c('unigram'=1, 'bigram'=2, 'trigram'=3), inline = F)
-                                                                                , actionButton('update_barplot', 'Update'))
-                                                                 
-                                                                 , mainPanel(h4("Barplot")
-                                                                             , plotOutput(outputId = 'Barplot')))
-                                            
-                                                       , tabPanel(title="Word Cloud"
-                                                                  , sidebarPanel(width=3
-                                                                                 , fileInput("inputRDS", "Choose RDS File"
-                                                                                             ,multiple = FALSE
-                                                                                             ,accept = c("text/rds","text/plain",".rds"))
-                                                                                 , h4("Wordcloud Options")
-                                                                                 , sliderInput('min_freq', 'Min Freq', min=1, max=200, value=20, step=1)
-                                                                                 , sliderInput('max_word', 'max_word', min=1, max=500, value=50, step=1)
-                                                                                 , radioButtons('wc_ngram', 'Choose N-gram', c('unigram'='unigram', 'bigram'='bigram', 'trigram'='trigram'), inline = F)
-                                                                                 , actionButton('update_wordcloud', 'Update')
-                                                                  )
-                                                                  , mainPanel(h4("Word Cloud")
-                                                                              , plotOutput(outputId = 'wordcloud')))
-                                                       , tabPanel(title="")
-                                         ))
-                              
+                                 , tabPanel("Latent Dirichlet Allocation"
+                                            , fluidPage(
+                                              fluidRow(column(3, sliderInput('topicNum','Number of Topics',min=1,max=200,value = 20, step=1))
+                                                       , column(3, sliderInput('learningNum','Repeated learning numbers',min=1,max=200,value = 20, step=1))
+                                                       , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01)
+                                                                , column(9, offset = 1, actionButton('visButton','GO')))
+                                              )
+                                              
+                                              , fluidRow(column(12, visOutput('LDAModel')))
+                                            )
+                                 ))
+                    
+                  , navbarMenu("Annotation" 
+                               , tabPanel("JSON schema"
+                                           , fluidPage(sidebarPanel(width = 3
+                                                                    , fileInput("uploadjson", "Upload"
+                                                                                ,accept = c("text/rds","text/plain",".rds", ".json")) 
+                                                                    , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
+                                                                    , downloadButton('save_JSON', 'Save JSON'))
+                                                       , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                                          ))
+                               , tabPanel("JSON structure"
+                                          , fluidPage(sidebarPanel(width = 3
+                                                                   , fileInput("uploadjson", "Upload"
+                                                                               ,accept = c("text/rds","text/plain",".rds", ".json")) 
+                                                                   , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
+                                                                   , downloadButton('save_JSON', 'Save JSON'))
+                                                      , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                                          ))
+                               , tabPanel("Annotation"
+                                          , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                                                                      actionButton("click", "Click")
+                                          )),
+                                          fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                                   column(6, jsoneditOutput("jsed", height ="600px"#, width="700px"
+                                                   )))
+                                          , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                          , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                                          ))
                               )
-                    
-                    , tabPanel("LDA Visualization"
-                               , fluidPage(
-                                       fluidRow(column(3, sliderInput('topicNum','Number of Topics',min=1,max=200,value = 20, step=1))
-                                                , column(3, sliderInput('learningNum','Repeated learning numbers',min=1,max=200,value = 20, step=1))
-                                                , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01)
-                                                          , column(9, offset = 1, actionButton('visButton','GO')))
-                                       )
-                                       
-                                       , fluidRow(column(12, visOutput('LDAModel')))
-                                       )
-                               )
-                    
-                    , tabPanel("JSON Editor"
-                               , fluidPage(sidebarPanel(width = 3
-                                                        , fileInput("uploadjson", "Upload"
-                                                                    ,accept = c("text/rds","text/plain",".rds", ".json")) 
-                                                        , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 핅요
-                                                        , downloadButton('save_JSON', 'Save JSON'))
-                                           , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
-                               ))
   ))
   
   
