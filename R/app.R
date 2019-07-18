@@ -73,7 +73,6 @@ runApp(shinyApp(
                                  )
                                  , tabPanel("Preprocessing"
                                             , sidebarPanel(switchInput("type", "Type", value=F)
-                                                           #selectInput("type", "type:", choices = noteType)
                                                            , uiOutput("typeOutput")
                                                            , sliderInput("num", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
                                                            , sliderInput("date", "Dates", min = 1990, max = 2019, value = c(2012, 2018), step = 1)
@@ -140,9 +139,7 @@ runApp(shinyApp(
                               )
   ))
   
-  
   , server <- (function(input, output){
-    
                   # Database Connection
                   DBconnection <- reactive({
                                       connectionDetails <<- DatabaseConnector::createConnectionDetails(dbms='sql server'
@@ -175,7 +172,6 @@ runApp(shinyApp(
                         }
                   })
                   
-                  
                   # preprocessing
                   observeEvent(input$process,{
                     sql <- "select top @num * from NOTE
@@ -200,22 +196,30 @@ runApp(shinyApp(
                   
                   # table
                   output$count <- renderTable({
-                                      sql1 <- "select count(distinct person_id) from person"
-                                      sql2 <- "select count(*) from note"
+                                      sql1 <- "select count(distinct a.person_id) 
+                                               from person a, note b 
+                                               where a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                  and a.person_id=b.person_id
+                                                  and and note_type_concept_id in (@note_type)
+                                                  and where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)"
+                                      sql2 <- "select count(*) from NOTE
+                                               where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                                                and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                and note_type_concept_id in (@note_type)"
                                       
                                       result1 <- data.frame(DatabaseConnector::querySql(connection = connection, sql1))
                                       result2 <- data.frame(DatabaseConnector::querySql(connection = connection, sql2))
-                                      
-                                      # person <- length(Text %>% select(PERSON_ID) %>% distinct(PERSON_ID))
-                                      # note <- nrow(Text)
-                                      
                                       
                                       table <- cbind(description = c("Number of persons", "Number of notes"), count=rbind(result1, result2))
                                  })
                   
                   # pie chart
                   output$pie <- renderPlotly({
-                                      sql <- "select distinct note_type_concept_id, count(note_id) cnt from NOTE group by note_type_concept_id order by cnt desc"
+                                      sql <- "select distinct note_type_concept_id, count(note_id) cnt from NOTE 
+                                              where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                                                        and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                        and note_type_concept_id in (@note_type)
+                                              group by note_type_concept_id order by cnt desc"
                                       result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
                                       
                                       plot_ly(result, labels = ~result$NOTE_TYPE_CONCEPT_ID, values=result$CNT, type="pie") %>% layout(title="NOTE type")
@@ -226,6 +230,9 @@ runApp(shinyApp(
                                       sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
                                                   from PERSON a, NOTE b
                                                   where a.person_id=b.person_id
+                                                    and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                                                    and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                    and note_type_concept_id in (@note_type)
                                                   group by gender_concept_id, year_of_birth
                                                   order by year_of_birth"
                                       
@@ -238,7 +245,12 @@ runApp(shinyApp(
                   
                   # date  
                   output$date <- renderPlotly({
-                                      sql <- "select left(note_date,4) as date, note_type_concept_id, count(note_id) cnt from NOTE group by left(note_date,4), note_type_concept_id"
+                                      sql <- "select left(note_date,4) as date, note_type_concept_id, count(note_id) cnt 
+                                              from NOTE 
+                                              where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                                                and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                and note_type_concept_id in (@note_type)
+                                              group by left(note_date,4), note_type_concept_id"
                                       
                                       result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
                                       result$NOTE_TYPE_CONCEPT_ID <- factor(result$NOTE_TYPE_CONCEPT_ID)
@@ -256,42 +268,6 @@ runApp(shinyApp(
                   #                                     saveRDS(processSetting(),file)
                   #                 })
                   
-                  # barplot
-                  # barplotSetting <- eventReactive(input$update_barplot,{
-                  #                           #filedata <<- readRDS(input$inputRDS$datapath)
-                  #                           fileDTM <<- filedata[[as.numeric(input$bar_ngram)]]
-                  #                           
-                  #                           col.ngram <- sort(colSums(as.matrix(fileDTM)), decreasing=T)
-                  #                           df.ngram <- data.frame(word=names(col.unigram), freq=col.unigram)
-                  #                           
-                  #                           df.ngram                    
-                  #                   })
-                  
-                  output$Barplot <- renderPlotly({
-                                          fileDTM <<- filedata[[as.numeric(input$bar_ngram)]]
-                                          
-                                          col.ngram <- sort(colSums(as.matrix(fileDTM)), decreasing=T)
-                                          df.ngram <- data.frame(word=names(col.unigram), freq=col.unigram)              
-                                        
-                                          plotly::plot_ly(df.ngram[1:input$word_freq,2], df.ngram[1:input$word_freq,1], type = "bar")
-                                          
-                                          #barplot(barplotSetting()[1:input$word_freq,2], names.arg = barplotSetting()[1:input$word_freq,1], col ="lightblue", main ="Most frequent words", ylab = "Word frequencies")
-                                    })
-                  
-                  # wordcloud 
-                  wordcloudSetting <- eventReactive(input$update_wordcloud,{
-                                              filedata <<- readRDS(input$inputRDS$datapath)
-                                              fileDTM <<- filedata[[as.numeric(input$bar_ngram)]]
-                                              
-                                              col.unigram <- sort(colSums(as.matrix(fileDTM)), decreasing=T)
-                                              df.unigram <- data.frame(word=names(col.unigram), freq=col.unigram)
-                                              
-                                              df.unigram                    
-                                      })
-                  
-                  output$wordcloud <- renderPlot({
-                                              wordcloud(wordcloudSetting()$word,wordcloudSetting()$freq,scale=c(4,0.5),min.freq=input$min_freq,max.words=input$max_word,colors=brewer.pal(8,'Dark2'))
-                                      })
                   
                   # LDAvis
                   VisSetting <- eventReactive(input$visButton,{
