@@ -181,8 +181,9 @@ runApp(shinyApp(
                     sql <- "select top @num * from NOTE
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
                               and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                              and note_type_concept_id in (@note_type)
                             order by newid()"
-                    sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort)
+                    sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
                     
                     Text <<- DatabaseConnector::querySql(connection, sql)
                     Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
@@ -193,7 +194,7 @@ runApp(shinyApp(
                                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
                     
                     if(exists("filedata")==TRUE){
-                          showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
+                      showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
                     }
                   })
                   
