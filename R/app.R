@@ -164,44 +164,38 @@ runApp(shinyApp(
                                       }
                               })
                        
-                  # preprocessing
-                  observeEvent(input$process,{
-                                      sql <- "select top @num * from NOTE
-                                              where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                              order by newid()"
-                                      sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2])
-
-                                      # query when using cohort ID. Need to test
-                                      # sql <- "select top @num * from NOTE
-                                      #         where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                      #           and person_id in (select sunject_id from @resultdb.dbo.Cohort where cohort_id=@cohort)
-                                      #         order by newid()"
-                                      # sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=paste0("[",input@resultdb,"]"), cohort=input$cohort)
-                                      
-                                      Text <<- DatabaseConnector::querySql(connection, sql)
-                                      Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
-                                      
-                                      Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
-                                      
-                                      filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                                                              , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-                                      
-                                      # if(exists(filedata)==T){showModal(modalDialog(
-                                      #                       title = "Messeage", "Preprocessing has been completed!!", easyClose = T, footer=modalButton("cancel"), size = "l"
-                                      #                 ))
-                                      # }
-                              })
-                           
                   # picker    
                   output$typeOutput <- renderUI({
-                                          if(input$type == T){
-                                                  sql <- "select distinct note_type_concept_id from NOTE" 
-                                                  typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1]) 
-                                                  pickerInput("note_type", label="note_type", choices = typeResult
-                                                              ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
-                                                              ,multiple=T)
-                                          }
-                                      })
+                        if(input$type == T){
+                              sql <- "select distinct note_type_concept_id from NOTE" 
+                              typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1]) 
+                              pickerInput("note_type", label="note_type", choices = typeResult
+                                          ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                          ,multiple=T)
+                        }
+                  })
+                  
+                  
+                  # preprocessing
+                  observeEvent(input$process,{
+                    sql <- "select top @num * from NOTE
+                            where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                              and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                            order by newid()"
+                    sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort)
+                    
+                    Text <<- DatabaseConnector::querySql(connection, sql)
+                    Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
+                    
+                    Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
+                    
+                    filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+                                            , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+                    
+                    if(exists("filedata")==TRUE){
+                          showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
+                    }
+                  })
                   
                   # table
                   output$count <- renderTable({
