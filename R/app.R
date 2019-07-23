@@ -98,15 +98,20 @@ runApp(shinyApp(
                                                        )
                                  )
                                  , tabPanel("Latent Dirichlet Allocation"
-                                            , fluidPage(
-                                              fluidRow(column(3, sliderInput('topicNum','Number of Topics',min=1,max=200,value = 20, step=1))
-                                                       , column(3, sliderInput('learningNum','Repeated learning numbers',min=1,max=200,value = 20, step=1))
-                                                       , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01)
-                                                                , column(9, offset = 1, actionButton('visButton','GO')))
-                                              )
-                                              
-                                              , fluidRow(column(12, visOutput('LDAModel')))
-                                            )
+                                            , tabsetPanel(tabPanel("LDA Visualization"
+                                                                   , fluidPage(
+                                                                     fluidRow(column(3, sliderInput('topicNum','Number of Topics',min=1,max=200,value = 20, step=1))
+                                                                              , column(3, sliderInput('learningNum','Repeated learning numbers',min=1,max=200,value = 20, step=1))
+                                                                              , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01)
+                                                                                       , column(9, offset = 1, actionButton('visButton','GO')))
+                                                                     )
+                                                                     , fluidRow(column(12, visOutput('LDAModel')))
+                                                                   )
+                                            ), tabPanel("LDA Sample"
+                                                        , fluidPage(fluidRow(
+                                                          DT::dataTableOutput("SampleTopic")
+                                                        )))
+                                            )))
                                  ))
                     
                   , navbarMenu("Annotation" 
@@ -136,7 +141,6 @@ runApp(shinyApp(
                                           , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
                                           , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                           ))
-                              )
   ))
   
   , server <- (function(input, output){
@@ -268,7 +272,6 @@ runApp(shinyApp(
                   #                                     saveRDS(processSetting(),file)
                   #                 })
                   
-                  
                   # LDAvis
                   VisSetting <- eventReactive(input$visButton,{
                                               fit <- topicmodels::LDA(fileDTM, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
@@ -297,6 +300,14 @@ runApp(shinyApp(
                   
                   output$LDAModel <- renderVis({VisSetting()})
                 
+                  output$SampleTopic <- DT::renderDataTable({
+                    for(i in 1:input$topicNum){
+                      assign(paste0("test", i), CRC %>% mutate(Topic = paste0("Topic",i)) %>% select(Topic, note_id, note_text) %>% filter(note_id %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
+                      assign(paste0("test",1), bind_rows(get(paste0("test",1)), get(paste0("test",i))))
+                    } 
+                    Sample_5 <<- unique(test1)
+                  })
+                  
                   # JSON Editor
                   output$jsed <- renderJsonedit({
                                         #if(exists(input$uploadjson)==T){jsonList <<- input$uploadjson} else{jsonList <- '{"a":{}}'}
