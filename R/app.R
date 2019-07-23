@@ -104,6 +104,7 @@ runApp(shinyApp(
                                                                               , column(3, sliderInput('learningNum','Repeated learning numbers',min=1,max=200,value = 20, step=1))
                                                                               , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01)
                                                                                        , column(9, offset = 1, actionButton('visButton','GO')))
+                                                                              , column(3, sliderInput('sample','Number of Samples',min=1,max=20,value = 5, step=1))
                                                                      )
                                                                      , fluidRow(column(12, visOutput('LDAModel')))
                                                                    )
@@ -111,36 +112,36 @@ runApp(shinyApp(
                                                         , fluidPage(fluidRow(
                                                           DT::dataTableOutput("SampleTopic")
                                                         )))
-                                            )))
-                                 ))
+                                            ))
+                                 )
                     
-                  , navbarMenu("Annotation" 
-                               , tabPanel("JSON schema"
-                                           , fluidPage(sidebarPanel(width = 3
-                                                                    , fileInput("uploadjson", "Upload"
-                                                                                ,accept = c("text/rds","text/plain",".rds", ".json")) 
-                                                                    , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
-                                                                    , downloadButton('save_JSON', 'Save JSON'))
-                                                       , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
-                                          ))
-                               , tabPanel("JSON structure"
-                                          , fluidPage(sidebarPanel(width = 3
-                                                                   , fileInput("uploadjson", "Upload"
-                                                                               ,accept = c("text/rds","text/plain",".rds", ".json")) 
-                                                                   , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
-                                                                   , downloadButton('save_JSON', 'Save JSON'))
-                                                      , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
-                                          ))
-                               , tabPanel("Annotation"
-                                          , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                                                      actionButton("click", "Click")
-                                          )),
-                                          fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                                                   column(6, jsoneditOutput("jsed", height ="600px"#, width="700px"
-                                                   )))
-                                          , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                                          , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                                          ))
+                  # , navbarMenu("Annotation" 
+                  #              , tabPanel("JSON schema"
+                  #                          , fluidPage(sidebarPanel(width = 3
+                  #                                                   , fileInput("uploadjson", "Upload"
+                  #                                                               ,accept = c("text/rds","text/plain",".rds", ".json")) 
+                  #                                                   , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
+                  #                                                   , downloadButton('save_JSON', 'Save JSON'))
+                  #                                      , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                  #                         ))
+                  #              , tabPanel("JSON structure"
+                  #                         , fluidPage(sidebarPanel(width = 3
+                  #                                                  , fileInput("uploadjson", "Upload"
+                  #                                                              ,accept = c("text/rds","text/plain",".rds", ".json")) 
+                  #                                                  , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
+                  #                                                  , downloadButton('save_JSON', 'Save JSON'))
+                  #                                     , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                  #                         ))
+                  #              , tabPanel("Annotation"
+                  #                         , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                  #                                                     actionButton("click", "Click")
+                  #                         )),
+                  #                         fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                  #                                  column(6, jsoneditOutput("jsed", height ="600px"#, width="700px"
+                  #                                  )))
+                  #                         , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                  #                         , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                  #                         )))
   ))
   
   , server <- (function(input, output){
@@ -192,6 +193,7 @@ runApp(shinyApp(
                     
                     filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
                                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+                    rownames(filedata) <<- Text$NOTE_ID
                     
                     if(exists("filedata")==TRUE){
                       showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
@@ -204,12 +206,15 @@ runApp(shinyApp(
                                                from person a, note b 
                                                where a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                                                   and a.person_id=b.person_id
-                                                  and and note_type_concept_id in (@note_type)
-                                                  and where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)"
+                                                  and note_type_concept_id in (@note_type)
+                                                  and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)"
                                       sql2 <- "select count(*) from NOTE
                                                where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                                                 and note_type_concept_id in (@note_type)"
+                                      sql1 <- SqlRender::render(sql1, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+                                      sql2 <- SqlRender::render(sql2, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+                                      
                                       
                                       result1 <- data.frame(DatabaseConnector::querySql(connection = connection, sql1))
                                       result2 <- data.frame(DatabaseConnector::querySql(connection = connection, sql2))
@@ -221,9 +226,11 @@ runApp(shinyApp(
                   output$pie <- renderPlotly({
                                       sql <- "select distinct note_type_concept_id, count(note_id) cnt from NOTE 
                                               where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                        and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                        and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                                                         and note_type_concept_id in (@note_type)
                                               group by note_type_concept_id order by cnt desc"
+                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+                                      
                                       result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
                                       
                                       plot_ly(result, labels = ~result$NOTE_TYPE_CONCEPT_ID, values=result$CNT, type="pie") %>% layout(title="NOTE type")
@@ -239,6 +246,7 @@ runApp(shinyApp(
                                                     and note_type_concept_id in (@note_type)
                                                   group by gender_concept_id, year_of_birth
                                                   order by year_of_birth"
+                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
                                       
                                       result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
                                       result$GENDER_CONCEPT_ID <- factor(result$GENDER_CONCEPT_ID)
@@ -252,9 +260,10 @@ runApp(shinyApp(
                                       sql <- "select left(note_date,4) as date, note_type_concept_id, count(note_id) cnt 
                                               from NOTE 
                                               where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                                                and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                                                 and note_type_concept_id in (@note_type)
                                               group by left(note_date,4), note_type_concept_id"
+                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
                                       
                                       result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
                                       result$NOTE_TYPE_CONCEPT_ID <- factor(result$NOTE_TYPE_CONCEPT_ID)
@@ -274,9 +283,9 @@ runApp(shinyApp(
                   
                   # LDAvis
                   VisSetting <- eventReactive(input$visButton,{
-                                              fit <- topicmodels::LDA(fileDTM, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
+                                              fit <- topicmodels::LDA(filedata, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
                                               phi <- posterior(fit)$terms %>% as.matrix
-                                              theta <- posterior(fit)$topics %>% as.matrix
+                                              theta <<- posterior(fit)$topics %>% as.matrix
                                               vocab <- colnames(phi)
                                               doc_length <- c()
                                             
@@ -285,7 +294,7 @@ runApp(shinyApp(
                                                               doc_length <- c(doc_length, stri_count(temp, regex='\\S+'))
                                               }
                                               
-                                              temp_frequency <- as.matrix(fileDTM)
+                                              temp_frequency <- as.matrix(filedata)
                                               freq_matrix <- data.frame(ST=colnames(temp_frequency),
                                                                         Freq=colSums(temp_frequency))
                                               rm(temp_frequency)
@@ -302,20 +311,20 @@ runApp(shinyApp(
                 
                   output$SampleTopic <- DT::renderDataTable({
                     for(i in 1:input$topicNum){
-                      assign(paste0("test", i), CRC %>% mutate(Topic = paste0("Topic",i)) %>% select(Topic, note_id, note_text) %>% filter(note_id %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
-                      assign(paste0("test",1), bind_rows(get(paste0("test",1)), get(paste0("test",i))))
+                      assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
+                      assign(paste0("Sample",1), bind_rows(get(paste0("Sample",1)), get(paste0("Sample",i))))
                     } 
-                    Sample_5 <<- unique(test1)
+                    return(unique(Sample1))
                   })
                   
                   # JSON Editor
-                  output$jsed <- renderJsonedit({
-                                        #if(exists(input$uploadjson)==T){jsonList <<- input$uploadjson} else{jsonList <- '{"a":{}}'}
-                                        jsonedit(jsonList <- input$uploadjson
-                                                 ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
-                                                                                      console.log(txt)
-                                                                                      Shiny.onInputChange('saveJson',txt)}")
-                                        )})
+                  # output$jsed <- renderJsonedit({
+                  #                       #if(exists(input$uploadjson)==T){jsonList <<- input$uploadjson} else{jsonList <- '{"a":{}}'}
+                  #                       jsonedit(jsonList <- input$uploadjson
+                  #                                ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
+                  #                                                                     console.log(txt)
+                  #                                                                     Shiny.onInputChange('saveJson',txt)}")
+                  #                       )})
                   
                   # output$save_JSON <- downloadHandler(
                   #                           filename = function(){paste0('save_JSON', ".json")}
