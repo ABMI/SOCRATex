@@ -1,6 +1,7 @@
 #devtools::install_github("timelyportfolio/listviewer")
 #devtools::install_github("ropensci/plotly")
 #devtools::install_github("dreamRs/shinyWidgets")
+#devtools::install_github("jeroen/jsonlite")
 
 library(DatabaseConnector)
 library(SqlRender)
@@ -20,6 +21,7 @@ library(ggplot2)
 library(listviewer)
 library(shiny)
 library(shinyjs)
+library(jsonlite)
 
 # N gram tokenizers
 UnigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1), paste, collapse = " "), use.names = FALSE)}
@@ -102,11 +104,11 @@ runApp(shinyApp(
                                                                    , fluidPage(
                                                                      fluidRow(column(3, sliderInput('topicNum','Number of Topics',min=1,max=200,value = 20, step=1))
                                                                               , column(3, sliderInput('learningNum','Repeated learning numbers',min=1,max=200,value = 20, step=1))
-                                                                              , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01)
-                                                                                       , column(9, offset = 1, actionButton('visButton','GO')))
+                                                                              , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01))
                                                                               , column(3, sliderInput('sample','Number of Samples',min=1,max=20,value = 5, step=1))
-                                                                     )
-                                                                     , fluidRow(column(12, visOutput('LDAModel')))
+                                                                              , column(11, align='right', offset = 1, actionButton('visButton','GO')))
+                                                                     , fluidRow(column(12, visOutput('LDAModel'))
+                                                                                )
                                                                    )
                                             ), tabPanel("LDA Sample"
                                                         , fluidPage(fluidRow(
@@ -115,33 +117,34 @@ runApp(shinyApp(
                                             ))
                                  )
                     
-                  # , navbarMenu("Annotation" 
-                  #              , tabPanel("JSON schema"
-                  #                          , fluidPage(sidebarPanel(width = 3
-                  #                                                   , fileInput("uploadjson", "Upload"
-                  #                                                               ,accept = c("text/rds","text/plain",".rds", ".json")) 
-                  #                                                   , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
-                  #                                                   , downloadButton('save_JSON', 'Save JSON'))
-                  #                                      , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
-                  #                         ))
-                  #              , tabPanel("JSON structure"
-                  #                         , fluidPage(sidebarPanel(width = 3
-                  #                                                  , fileInput("uploadjson", "Upload"
-                  #                                                              ,accept = c("text/rds","text/plain",".rds", ".json")) 
-                  #                                                  , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
-                  #                                                  , downloadButton('save_JSON', 'Save JSON'))
-                  #                                     , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
-                  #                         ))
-                  #              , tabPanel("Annotation"
-                  #                         , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                  #                                                     actionButton("click", "Click")
-                  #                         )),
-                  #                         fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                  #                                  column(6, jsoneditOutput("jsed", height ="600px"#, width="700px"
-                  #                                  )))
-                  #                         , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                  #                         , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                  #                         )))
+                  , navbarMenu("Annotation"
+                               , tabPanel("JSON schema"
+                                           , fluidPage(sidebarPanel(width = 3
+                                                                    , fileInput("uploadjson", "Upload"
+                                                                                ,accept = c("text/rds","text/plain",".rds", ".json"))
+                                                                    , actionButton("update", 'Update JSON') 
+                                                                    , downloadButton('save_JSON', 'Save JSON'))
+                                                       , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                                          ))
+                               # , tabPanel("JSON structure"
+                               #            , fluidPage(sidebarPanel(width = 3
+                               #                                     , fileInput("uploadjson", "Upload"
+                               #                                                 ,accept = c("text/rds","text/plain",".rds", ".json"))
+                               #                                     , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
+                               #                                     , downloadButton('save_JSON', 'Save JSON'))
+                               #                        , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                               #            ))
+                               # , tabPanel("Annotation"
+                               #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                               #                                        actionButton("click", "Click")
+                               #            )),
+                               #            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                               #                     column(6, jsoneditOutput("jsed", height ="600px"#, width="700px"
+                               #                     )))
+                               #            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                               #            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                               #            ))
+                               )
   ))
   
   , server <- (function(input, output){
@@ -325,7 +328,6 @@ runApp(shinyApp(
                   #                                                                     console.log(txt)
                   #                                                                     Shiny.onInputChange('saveJson',txt)}")
                   #                       )})
-                  
                   # output$save_JSON <- downloadHandler(
                   #                           filename = function(){paste0('save_JSON', ".json")}
                   #                           , content = function(file){write(input$saveJson, file)}
