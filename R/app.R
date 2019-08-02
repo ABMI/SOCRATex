@@ -8,7 +8,6 @@ library(SqlRender)
 library(tm)
 library(SnowballC)
 library(rJava)
-library(wordcloud)
 library(LDAvis)
 library(topicmodels)
 library(dplyr)
@@ -120,20 +119,20 @@ runApp(shinyApp(
                   , navbarMenu("Annotation"
                                , tabPanel("JSON schema"
                                            , fluidPage(sidebarPanel(width = 3
-                                                                    , fileInput("uploadjson", "Upload"
+                                                                    , fileInput("UploadShcema", "Upload"
                                                                                 ,accept = c("text/rds","text/plain",".rds", ".json"))
-                                                                    , actionButton("update", 'Update JSON') 
-                                                                    , downloadButton('save_JSON', 'Save JSON'))
+                                                                    , actionButton("UpdateSchema", 'Update JSON') 
+                                                                    , downloadButton('SaveSchema', 'Save JSON'))
                                                        , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
                                           ))
-                               # , tabPanel("JSON structure"
-                               #            , fluidPage(sidebarPanel(width = 3
-                               #                                     , fileInput("uploadjson", "Upload"
-                               #                                                 ,accept = c("text/rds","text/plain",".rds", ".json"))
-                               #                                     , actionButton("update", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
-                               #                                     , downloadButton('save_JSON', 'Save JSON'))
-                               #                        , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
-                               #            ))
+                               , tabPanel("JSON structure"
+                                          , fluidPage(sidebarPanel(width = 3
+                                                                   , fileInput("UploadJSON", "Upload"
+                                                                               ,accept = c("text/rds","text/plain",".rds", ".json"))
+                                                                   , actionButton("UpdateJSON", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
+                                                                   , downloadButton('SaveJSON', 'Save JSON'))
+                                                      , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                                          ))
                                # , tabPanel("Annotation"
                                #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
                                #                                        actionButton("click", "Click")
@@ -320,17 +319,36 @@ runApp(shinyApp(
                     return(unique(Sample1))
                   })
                   
-                  # JSON Editor
-                  # output$jsed <- renderJsonedit({
-                  #                       #if(exists(input$uploadjson)==T){jsonList <<- input$uploadjson} else{jsonList <- '{"a":{}}'}
-                  #                       jsonedit(jsonList <- input$uploadjson
-                  #                                ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
-                  #                                                                     console.log(txt)
-                  #                                                                     Shiny.onInputChange('saveJson',txt)}")
-                  #                       )})
-                  # output$save_JSON <- downloadHandler(
-                  #                           filename = function(){paste0('save_JSON', ".json")}
-                  #                           , content = function(file){write(input$saveJson, file)}
-                  #                    )
+                  #JSON Schema
+                  output$jsed <- renderJsonedit({
+                    jsonedit(jsonList <- jsonlite::fromJSON((input$UploadSchema)$datapath)
+                             ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
+                                                                        console.log(txt)
+                                                                        Shiny.onInputChange('Save_Schema',txt)}")
+                    )})
+                  # eventReactive(input$UpdateSchema, {
+                  #   
+                  # })
+                  
+                  output$SaveSchema <- downloadHandler(
+                                            filename = function(){paste0('SaveSchema', ".json")}
+                                            , content = function(file){write(input$Save_Schema, file)}
+                                     )
+                  
+                  #JSON Structure
+                  output$jsed <- renderJsonedit({
+                    jsonedit(jsonList <- jsonlite::fromJSON((input$UploadJSON)$datapath)
+                             ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
+                                                                        console.log(txt)
+                                                                        Shiny.onInputChange('Save_JSON',txt)}")
+                    )})
+                  # eventReactive(input$UpdateJSON, {
+                  #   
+                  # })
+                  
+                  output$SaveJSON <- downloadHandler(
+                    filename = function(){paste0('SaveSchema', ".json")}
+                    , content = function(file){write(input$Save_JSON, file)}
+                  )
         })
 ))
