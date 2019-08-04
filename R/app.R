@@ -119,20 +119,20 @@ runApp(shinyApp(
                   , navbarMenu("Annotation"
                                , tabPanel("JSON schema"
                                            , fluidPage(sidebarPanel(width = 3
-                                                                    , fileInput("UploadShcema", "Upload"
+                                                                    , fileInput("UploadSchema", "Upload"
                                                                                 ,accept = c("text/rds","text/plain",".rds", ".json"))
                                                                     , actionButton("UpdateSchema", 'Update JSON') 
                                                                     , downloadButton('SaveSchema', 'Save JSON'))
                                                        , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
                                           ))
-                               , tabPanel("JSON structure"
-                                          , fluidPage(sidebarPanel(width = 3
-                                                                   , fileInput("UploadJSON", "Upload"
-                                                                               ,accept = c("text/rds","text/plain",".rds", ".json"))
-                                                                   , actionButton("UpdateJSON", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
-                                                                   , downloadButton('SaveJSON', 'Save JSON'))
-                                                      , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
-                                          ))
+                               # , tabPanel("JSON structure"
+                               #            , fluidPage(sidebarPanel(width = 3
+                               #                                     , fileInput("UploadJSON", "Upload"
+                               #                                                 ,accept = c("text/rds","text/plain",".rds", ".json"))
+                               #                                     , actionButton("UpdateJSON", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
+                               #                                     , downloadButton('SaveJSON', 'Save JSON'))
+                               #                        , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                               #            ))
                                # , tabPanel("Annotation"
                                #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
                                #                                        actionButton("click", "Click")
@@ -273,15 +273,6 @@ runApp(shinyApp(
                                       plotly::ggplotly(ggplot(result, aes(x=DATE, y=CNT, fill=NOTE_TYPE_CONCEPT_ID)) + geom_bar(stat = "identity", position = "stack") + 
                                                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
                                 })
-                 
-                  # downloas button
-                  # output$process <- downloadHandler(
-                  #                       filename = function(){
-                  #                                     paste0('process', ".rds")
-                  #                       }
-                  #                       , content = function(file){
-                  #                                     saveRDS(processSetting(),file)
-                  #                 })
                   
                   # LDAvis
                   VisSetting <- eventReactive(input$visButton,{
@@ -326,29 +317,21 @@ runApp(shinyApp(
                                                                         console.log(txt)
                                                                         Shiny.onInputChange('Save_Schema',txt)}")
                     )})
-                  # eventReactive(input$UpdateSchema, {
-                  #   
-                  # })
                   
+                  # The saving part, content, need to be updated. Then saving will perform perfectly. Also, eventReactive will be better than oberseve
                   output$SaveSchema <- downloadHandler(
-                                            filename = function(){paste0('SaveSchema', ".json")}
-                                            , content = function(file){write(input$Save_Schema, file)}
-                                     )
-                  
-                  #JSON Structure
-                  output$jsed <- renderJsonedit({
-                    jsonedit(jsonList <- jsonlite::fromJSON((input$UploadJSON)$datapath)
-                             ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
-                                                                        console.log(txt)
-                                                                        Shiny.onInputChange('Save_JSON',txt)}")
-                    )})
-                  # eventReactive(input$UpdateJSON, {
-                  #   
-                  # })
-                  
-                  output$SaveJSON <- downloadHandler(
                     filename = function(){paste0('SaveSchema', ".json")}
-                    , content = function(file){write(input$Save_JSON, file)}
+                    , content = function(file){write(jsonlite::fromJSON(input$Save_Schema), 'JSONSchema.json')}
                   )
+                  
+                  # #JSON Structure
+                  # output$jsed <- renderJsonedit({
+                  #   jsonedit(jsonList <- jsonlite::fromJSON((input$UploadJSON)$datapath)
+                  #            ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
+                  #                                                       console.log(txt)
+                  #                                                       Shiny.onInputChange('Save_JSON',txt)}")
+                  #   )})
+                  
+                  
         })
 ))
