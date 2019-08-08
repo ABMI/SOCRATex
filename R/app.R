@@ -118,12 +118,13 @@ runApp(shinyApp(
                     
                   , navbarMenu("Annotation"
                                , tabPanel("JSON schema"
-                                           , fluidPage(sidebarPanel(width = 3
-                                                                    , fileInput("UploadShcema", "Upload"
-                                                                                ,accept = c("text/rds","text/plain",".rds", ".json"))
-                                                                    , actionButton("UpdateSchema", 'Update JSON') 
-                                                                    , downloadButton('SaveSchema', 'Save JSON'))
-                                                       , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                                          , fluidPage(sidebarPanel(width = 3
+                                                                   , fileInput("UploadSchema", "Upload"
+                                                                               ,accept = c("text/rds","text/plain",".rds", ".json"))
+                                                                   , actionButton("UpdateSchema", 'Update JSON') 
+                                                                   , downloadButton('DownloadSchema', 'Download Schema'))
+                                                      , mainPanel(jsoneditOutput("Schema")
+                                                                  , verbatimTextOutput('SchemaText'))
                                           ))
                                , tabPanel("JSON structure"
                                           , fluidPage(sidebarPanel(width = 3
@@ -320,35 +321,26 @@ runApp(shinyApp(
                   })
                   
                   #JSON Schema
-                  output$jsed <- renderJsonedit({
-                    jsonedit(jsonList <- jsonlite::fromJSON((input$UploadSchema)$datapath)
-                             ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
-                                                                        console.log(txt)
-                                                                        Shiny.onInputChange('Save_Schema',txt)}")
-                    )})
-                  # eventReactive(input$UpdateSchema, {
-                  #   
-                  # })
-                  
-                  output$SaveSchema <- downloadHandler(
-                                            filename = function(){paste0('SaveSchema', ".json")}
-                                            , content = function(file){write(input$Save_Schema, file)}
-                                     )
-                  
-                  #JSON Structure
-                  output$jsed <- renderJsonedit({
-                    jsonedit(jsonList <- jsonlite::fromJSON((input$UploadJSON)$datapath)
-                             ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
-                                                                        console.log(txt)
-                                                                        Shiny.onInputChange('Save_JSON',txt)}")
-                    )})
-                  # eventReactive(input$UpdateJSON, {
-                  #   
-                  # })
-                  
-                  output$SaveJSON <- downloadHandler(
-                    filename = function(){paste0('SaveSchema', ".json")}
-                    , content = function(file){write(input$Save_JSON, file)}
-                  )
+                  ## jsonList <- "\"Sample\":\"JSON\"\"
+                  ## jsonList <- jsonlite::fromJSON((input$UploadSchema)$datapath)
+                  output$Schema <- renderJsonedit({
+                      jsonedit(jsonList <- jsonlite::fromJSON((input$UploadSchema)$datapath)
+                               ,"onChange" = htmlwidgets::JS("() => {
+                                                             var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Schema'})[0].editor.getText()
+                                                             console.log(txt)
+                                                             Shiny.onInputChange('jsedOutput',txt)}")
+                               )
+                  })
+                    
+                    eventReactive(input$UpdateSchema,{
+                      test <<- fromJSON(input$jsedOutput)
+                    })
+                    
+                    output$SchemaText <- renderText(input$jsedOutput)
+                    
+                    output$DownloadSchema <- downloadHandler(
+                      filename = function(){paste0('DownloadSchema', ".json")}
+                      , content = function(file){write(jsonlite::fromJSON(input$Save_Schema), 'JSONSchema.json')}
+                    )
         })
 ))
