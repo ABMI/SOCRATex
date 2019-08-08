@@ -126,24 +126,16 @@ runApp(shinyApp(
                                                       , mainPanel(jsoneditOutput("Schema")
                                                                   , verbatimTextOutput('SchemaText'))
                                           ))
-                               , tabPanel("JSON structure"
-                                          , fluidPage(sidebarPanel(width = 3
-                                                                   , fileInput("UploadJSON", "Upload"
-                                                                               ,accept = c("text/rds","text/plain",".rds", ".json"))
-                                                                   , actionButton("UpdateJSON", 'Update JSON') #아직 server 와 연동되지 않음, 서버에서 작업 필요
-                                                                   , downloadButton('SaveJSON', 'Save JSON'))
-                                                      , mainPanel(jsoneditOutput("jsed", height ="800px", width="1000px"))
+                               , tabPanel("JSON Annotation"
+                                          , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                                                                      actionButton("click", "Click")
+                                          )),
+                                          fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                                   column(6, jsoneditOutput("annot", height ="600px"#, width="700px"
+                                                   )))
+                                          , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                          , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                           ))
-                               # , tabPanel("Annotation"
-                               #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                               #                                        actionButton("click", "Click")
-                               #            )),
-                               #            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                               #                     column(6, jsoneditOutput("jsed", height ="600px"#, width="700px"
-                               #                     )))
-                               #            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                               #            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                               #            ))
                                )
   ))
   
@@ -342,5 +334,60 @@ runApp(shinyApp(
                       filename = function(){paste0('DownloadSchema', ".json")}
                       , content = function(file){write(jsonlite::fromJSON(input$Save_Schema), 'JSONSchema.json')}
                     )
+                    
+                    # Text output
+                    
+                    output$note <- renderText({noteText[as.numeric(input$num)]})
+                    
+                    # JSON Editor
+                    output$annot <- renderJsonedit({
+                      jsonedit(jsonList <<- Json[as.numeric(input$num)]
+                               ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
+                                                             console.log(txt)
+                                                             Shiny.onInputChange('saveJson',txt)}")
+                               )
+                      
+  })
+                    
+                    errorReportSetting <- eventReactive(input$button,{
+                      if(is.null(input$saveJson)){
+                        v <- jsonvalidate::json_validator(schema)
+                        errorInfo <- v(jsonList, verbose=TRUE, greedy=TRUE)
+                        # if(errorInfo[1] == TRUE){
+                        #   #save
+                        #   jsonFile <- jsonFile[as.numeric(input$num),'json']
+                        #   write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F)
+                        # }
+                        
+                        if(errorInfo[1] ==TRUE)
+                          errorInfo[1] = 'Validate!'
+                        else{
+                          df <- attr(errorInfo,'error')
+                          errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
+                        }
+                      }
+                      else{
+                        jsonList[] <- input$saveJson
+                        v <- jsonvalidate::json_validator(schema)
+                        errorInfo <- v(input$saveJson, verbose=TRUE, greedy=TRUE)
+                        if(errorInfo[1] == TRUE){
+                          #save
+                          jsonFile <- jsonFile[as.numeric(input$num),'json']
+                          write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F)
+                        }
+                        else{
+                          df <- attr(errorInfo,'error')
+                          errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
+                        }
+                        
+                      }
+                      
+                      errorInfo
+                      
+                    })
+                    
+                    output$errorReport <- renderText({
+                      as.character(errorReportSetting())
+                    })    
         })
 ))
