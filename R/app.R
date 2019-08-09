@@ -240,60 +240,49 @@ runApp(shinyApp(
                   })
                   
                   # person
-                  output$age <- renderPlotly({
-                                    if(exists("input$resultdb")==T){
-                                      sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
-                                                  from PERSON a, NOTE b
-                                                  where a.person_id=b.person_id
-                                                    and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                    and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
-                                                    and note_type_concept_id in (@note_type)
-                                                  group by gender_concept_id, year_of_birth
-                                                  order by year_of_birth"
-                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-                                    } else{
-                                      sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
-                                                  from PERSON a, NOTE b
-                                                  where a.person_id=b.person_id
-                                                    and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                    and note_type_concept_id in (@note_type)
-                                                  group by gender_concept_id, year_of_birth
-                                                  order by year_of_birth"
-                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], note_type=input$note_type)
-                                    }
-                                      
-                                      result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
-                                      result$GENDER_CONCEPT_ID <- factor(result$GENDER_CONCEPT_ID)
-                                      
-                                      plotly::ggplotly(ggplot(result, aes(x=YEAR_OF_BIRTH, y=CNT, color=GENDER_CONCEPT_ID))
-                                                       + geom_line(size=1) + theme_minimal() + scale_color_manual(values = c("#3300FF", "#FF9933")))
-                                })
+                  # output$age <- renderPlotly({
+                  #   
+                  #   if(exists("input$resultdb")==T){
+                  #                     sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
+                  #                                 from PERSON a, NOTE b
+                  #                                 where a.person_id=b.person_id
+                  #                                   and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                  #                                   and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                  #                                   and note_type_concept_id in (@note_type)
+                  #                                 group by gender_concept_id, year_of_birth
+                  #                                 order by year_of_birth"
+                  #                     sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+                  #                   } else{
+                  #                     sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
+                  #                                 from PERSON a, NOTE b
+                  #                                 where a.person_id=b.person_id
+                  #                                   and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                  #                                   and note_type_concept_id in (@note_type)
+                  #                                 group by gender_concept_id, year_of_birth
+                  #                                 order by year_of_birth"
+                  #                     sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], note_type=input$note_type)
+                  #                   }
+                  #                     
+                  #                     result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
+                  #                     
+                  #                     
+                  #                     result$GENDER_CONCEPT_ID <- factor(result$GENDER_CONCEPT_ID)
+                  #                     
+                  #                     plotly::ggplotly(ggplot(result, aes(x=YEAR_OF_BIRTH, y=CNT, color=GENDER_CONCEPT_ID))
+                  #                                      + geom_line(size=1) + theme_minimal() + scale_color_manual(values = c("#3300FF", "#FF9933")))
+                  #               })
                   
                   # date  
                   output$date <- renderPlotly({
-                                    if(exists("input$resultdb")==T){
-                                      sql <- "select left(note_date,4) as date, note_type_concept_id, count(note_id) cnt 
-                                              from NOTE 
-                                              where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
-                                                and note_type_concept_id in (@note_type)
-                                              group by left(note_date,4), note_type_concept_id"
-                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-                                    } else{
-                                      sql <- "select left(note_date,4) as date, note_type_concept_id, count(note_id) cnt 
-                                              from NOTE 
-                                              where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                and note_type_concept_id in (@note_type)
-                                              group by left(note_date,4), note_type_concept_id"
-                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], note_type=input$note_type)
-                                    }
-                                      
-                                      result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
-                                      result$NOTE_TYPE_CONCEPT_ID <- factor(result$NOTE_TYPE_CONCEPT_ID)
-                                      
-                                      plotly::ggplotly(ggplot(result, aes(x=DATE, y=CNT, fill=NOTE_TYPE_CONCEPT_ID)) + geom_bar(stat = "identity", position = "stack") + 
-                                                         theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
-                                })
+                    Text$NOTE_DATE <- Text$NOTE_DATE %>% substring(1, 4)
+                    date <- Text %>% group_by(NOTE_DATE, NOTE_TYPE_CONCEPT_ID) %>% select(NOTE_DATE, NOTE_TYPE_CONCEPT_ID) %>% count(NOTE_DATE, NOTE_TYPE_CONCEPT_ID)
+                    date <- as.data.frame(date)
+                    date$NOTE_TYPE_CONCEPT_ID <- factor(date$NOTE_TYPE_CONCEPT_ID)
+                    colnames(date) <- c("NoteDate", "NoteType", "Count")
+                    
+                    plotly::ggplotly(ggplot(date, aes(x=NoteDate, y=Count, fill=NoteType)) + geom_bar(stat = "identity", position = "stack") + 
+                                       theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
+                  })
                   
                   # LDAvis
                   VisSetting <- eventReactive(input$visButton,{
