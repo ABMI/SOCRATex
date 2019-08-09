@@ -92,7 +92,7 @@ runApp(shinyApp(
                     
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
-                                            , fluidRow(column(6, align='center', DToutput("count"))
+                                            , fluidRow(column(6, align='center', dataTableOutput("count"))
                                                        , column(6, plotlyOutput("age"))
                                                        )
                                             , fluidRow(column(6,plotlyOutput("pie"))
@@ -177,10 +177,11 @@ runApp(shinyApp(
                   observeEvent(input$process,{
                     
                     if(exists("input$resultdb")==T){
-                      sql <- "select top @num * from NOTE
+                      sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
                               and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                               and note_type_concept_id in (@note_type)
+                              and a.person_id=b.person_id
                             order by newid()"
                       sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
                       
@@ -195,9 +196,10 @@ runApp(shinyApp(
                                               , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
                       rownames(filedata) <<- Text$NOTE_ID
                     } else{
-                      sql <- "select top @num * from NOTE
+                      sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
                               and note_type_concept_id in (@note_type)
+                              and a.person_id=b.person_id
                             order by newid()"
                       sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
                       
@@ -219,7 +221,7 @@ runApp(shinyApp(
                   })
                   
                   # table
-                  output$count <- renderDT({
+                  output$count <- renderDataTable({
                     person <- Text %>% select(PERSON_ID) %>% distinct() %>% count()
                     note <- Text %>% select(NOTE_ID) %>% count()
                     
@@ -240,38 +242,16 @@ runApp(shinyApp(
                     plot_ly(pie, labels = ~pie$NoteType, values=pie$Count, type="pie") %>% layout(title="The Note Type Proportions of Data")
                   })
                   
-                  # person
-                  # output$age <- renderPlotly({
-                  #   
-                  #   if(exists("input$resultdb")==T){
-                  #                     sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
-                  #                                 from PERSON a, NOTE b
-                  #                                 where a.person_id=b.person_id
-                  #                                   and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                  #                                   and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
-                  #                                   and note_type_concept_id in (@note_type)
-                  #                                 group by gender_concept_id, year_of_birth
-                  #                                 order by year_of_birth"
-                  #                     sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-                  #                   } else{
-                  #                     sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
-                  #                                 from PERSON a, NOTE b
-                  #                                 where a.person_id=b.person_id
-                  #                                   and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                  #                                   and note_type_concept_id in (@note_type)
-                  #                                 group by gender_concept_id, year_of_birth
-                  #                                 order by year_of_birth"
-                  #                     sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], note_type=input$note_type)
-                  #                   }
-                  #                     
-                  #                     result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
-                  #                     
-                  #                     
-                  #                     result$GENDER_CONCEPT_ID <- factor(result$GENDER_CONCEPT_ID)
-                  #                     
-                  #                     plotly::ggplotly(ggplot(result, aes(x=YEAR_OF_BIRTH, y=CNT, color=GENDER_CONCEPT_ID))
-                  #                                      + geom_line(size=1) + theme_minimal() + scale_color_manual(values = c("#3300FF", "#FF9933")))
-                  #               })
+                  # Age
+                  output$age <- renderPlotly({
+                    age <- Text %>% group_by(YEAR_OF_BIRTH, GENDER_CONCEPT_ID) %>% select(YEAR_OF_BIRTH, GENDER_CONCEPT_ID) %>% count(YEAR_OF_BIRTH, GENDER_CONCEPT_ID)
+                    age <-as.data.frame(age)
+                    colnames(age) <- c("BirthYear", "Gender", "Count")
+                    age$Gender <- factor(age$Gender)
+                    
+                    plotly::ggplotly(ggplot(age, aes(x=BirthYear, y=Count, color=Gender))
+                                     + geom_line(size=1) + theme_minimal() + scale_color_manual(values = c("#3300FF", "#FF9933")))  
+                  })
                   
                   # date  
                   output$date <- renderPlotly({
