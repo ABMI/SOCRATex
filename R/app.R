@@ -21,6 +21,7 @@ library(listviewer)
 library(shiny)
 library(shinyjs)
 library(jsonlite)
+library(DT)
 
 # N gram tokenizers
 UnigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1), paste, collapse = " "), use.names = FALSE)}
@@ -56,7 +57,7 @@ preprocess <- function(text, english = F, whitespace = F, stopwords = F, number 
 
 # Rshiny Application
 runApp(shinyApp(
-  ui <- (navbarPage(theme = shinythemes::shinytheme("flatly")
+  ui <- (navbarPage(theme = shinythemes::shinytheme("spacelab")
                     , "SOCRATex"
                     , navbarMenu("Extraction"
                                  , tabPanel("DB Connection"
@@ -91,7 +92,7 @@ runApp(shinyApp(
                     
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
-                                            , fluidRow(column(6, align='center', tableOutput("count"))
+                                            , fluidRow(column(6, align='center', DToutput("count"))
                                                        , column(6, plotlyOutput("age"))
                                                        )
                                             , fluidRow(column(6,plotlyOutput("pie"))
@@ -218,7 +219,7 @@ runApp(shinyApp(
                   })
                   
                   # table
-                  output$count <- renderTable({
+                  output$count <- renderDT({
                     person <- Text %>% select(PERSON_ID) %>% distinct() %>% count()
                     note <- Text %>% select(NOTE_ID) %>% count()
                     
