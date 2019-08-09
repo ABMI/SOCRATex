@@ -123,9 +123,9 @@ runApp(shinyApp(
                                                                                ,accept = c("text/rds","text/plain",".rds", ".json"))
                                                                    , actionButton("UpdateSchema", 'Update JSON') 
                                                                    , downloadButton('DownloadSchema', 'Download Schema'))
-                                                      , mainPanel(jsoneditOutput("Schema")
-                                                                  , verbatimTextOutput('SchemaText'))
+                                                      , mainPanel(jsoneditOutput("Schema"))
                                           ))
+                               
                                , tabPanel("JSON Annotation"
                                           , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
                                                                       actionButton("click", "Click")
@@ -142,53 +142,75 @@ runApp(shinyApp(
   , server <- (function(input, output){
                   # Database Connection
                   DBconnection <- reactive({
-                                      connectionDetails <<- DatabaseConnector::createConnectionDetails(dbms='sql server'
-                                                                                                       , server=input$ip_address
-                                                                                                       , schema=input$database_schema
-                                                                                                       , user=input$user
-                                                                                                       , password=input$password)
-                                      connection <<- DatabaseConnector::connect(connectionDetails)
-                                  })
+                    connectionDetails <<- DatabaseConnector::createConnectionDetails(dbms='sql server'
+                                                                                     , server=input$ip_address
+                                                                                     , schema=input$database_schema
+                                                                                     , user=input$user
+                                                                                     , password=input$password)
+                    connection <<- DatabaseConnector::connect(connectionDetails)
+                  })
                   
                   observeEvent(input$connect,{
-
-                                      DBcon <<- DBconnection()
-                                      
-                                      if(DatabaseConnector::dbIsValid(connection)==TRUE){
-                                                showModal(modalDialog(
-                                                              title = "Messeage", "Database connection success!!", easyClose = T, footer=modalButton("cancel"), size = "l"
-                                                ))
-                                      }
-                              })
+                    
+                    DBcon <<- DBconnection()
+                    
+                    if(DatabaseConnector::dbIsValid(connection)==TRUE){
+                      showModal(modalDialog(
+                        title = "Messeage", "Database connection success!!", easyClose = T, footer=modalButton("cancel"), size = "l"
+                      ))
+                    }
+                  })
                        
                   # picker    
                   output$typeOutput <- renderUI({
-                        if(input$type == T){
-                              sql <- "select distinct note_type_concept_id from NOTE" 
-                              typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1]) 
-                              pickerInput("note_type", label="note_type", choices = typeResult
-                                          ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
-                                          ,multiple=T)
-                        }
+                    if(input$type == T){
+                      sql <- "select distinct note_type_concept_id from NOTE" 
+                      typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1]) 
+                      pickerInput("note_type", label="note_type", choices = typeResult
+                                  ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                  ,multiple=T)
+                    }
                   })
                   
                   # preprocessing
                   observeEvent(input$process,{
-                    sql <- "select top @num * from NOTE
+                    
+                    if(exists("input$resultdb")==T){
+                      sql <- "select top @num * from NOTE
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
                               and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                               and note_type_concept_id in (@note_type)
                             order by newid()"
-                    sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+                      sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
+                      
+                      Text <<- DatabaseConnector::querySql(connection, sql)
+                      
+                      if(exists("input$dictionary_table")==T){
+                        Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)  
+                        Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
+                      } else{Text_corpus <<- Text$NOTE_TEXT}
                     
-                    Text <<- DatabaseConnector::querySql(connection, sql)
-                    Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
-                    
-                    Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
-                    
-                    filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                                            , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-                    rownames(filedata) <<- Text$NOTE_ID
+                      filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+                                              , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+                      rownames(filedata) <<- Text$NOTE_ID
+                    } else{
+                      sql <- "select top @num * from NOTE
+                            where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                              and note_type_concept_id in (@note_type)
+                            order by newid()"
+                      sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
+                      
+                      Text <<- DatabaseConnector::querySql(connection, sql)
+                      
+                      if(exists("input$dictionary_table")==T){
+                        Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)  
+                        Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
+                      } else{Text_corpus <<- Text$NOTE_TEXT}
+                      
+                      filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+                                              , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+                      rownames(filedata) <<- Text$NOTE_ID
+                    }
                     
                     if(exists("filedata")==TRUE){
                       showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
@@ -197,42 +219,29 @@ runApp(shinyApp(
                   
                   # table
                   output$count <- renderTable({
-                                      sql1 <- "select count(distinct a.person_id) 
-                                               from person a, note b 
-                                               where a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
-                                                  and a.person_id=b.person_id
-                                                  and note_type_concept_id in (@note_type)
-                                                  and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)"
-                                      sql2 <- "select count(*) from NOTE
-                                               where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
-                                                and note_type_concept_id in (@note_type)"
-                                      sql1 <- SqlRender::render(sql1, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-                                      sql2 <- SqlRender::render(sql2, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-                                      
-                                      
-                                      result1 <- data.frame(DatabaseConnector::querySql(connection = connection, sql1))
-                                      result2 <- data.frame(DatabaseConnector::querySql(connection = connection, sql2))
-                                      
-                                      table <- cbind(description = c("Number of persons", "Number of notes"), count=rbind(result1, result2))
-                                 })
+                    person <- Text %>% select(PERSON_ID) %>% distinct() %>% count()
+                    note <- Text %>% select(NOTE_ID) %>% count()
+                    
+                    table <- as.data.frame(rbind(person, note))
+                    
+                    rownames(table) <- c("Person", "Note")  
+                    colnames(table) <- c("Count")
+                    
+                    table
+                  })
                   
                   # pie chart
                   output$pie <- renderPlotly({
-                                      sql <- "select distinct note_type_concept_id, count(note_id) cnt from NOTE 
-                                              where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                                                        and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
-                                                        and note_type_concept_id in (@note_type)
-                                              group by note_type_concept_id order by cnt desc"
-                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-                                      
-                                      result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
-                                      
-                                      plot_ly(result, labels = ~result$NOTE_TYPE_CONCEPT_ID, values=result$CNT, type="pie") %>% layout(title="NOTE type")
-                                })
+                    pie <- Text %>% group_by(NOTE_TYPE_CONCEPT_ID) %>% select(NOTE_ID) %>% count(NOTE_TYPE_CONCEPT_ID)
+                    pie <- as.data.frame(pie)
+                    colnames(pie) <- c("NoteType", "Count")
+                    
+                    plot_ly(pie, labels = ~pie$NoteType, values=pie$Count, type="pie") %>% layout(title="The Note Type Proportions of Data")
+                  })
                   
                   # person
                   output$age <- renderPlotly({
+                                    if(exists("input$resultdb")==T){
                                       sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
                                                   from PERSON a, NOTE b
                                                   where a.person_id=b.person_id
@@ -242,6 +251,16 @@ runApp(shinyApp(
                                                   group by gender_concept_id, year_of_birth
                                                   order by year_of_birth"
                                       sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+                                    } else{
+                                      sql <- "select year_of_birth, gender_concept_id, count(*) as cnt
+                                                  from PERSON a, NOTE b
+                                                  where a.person_id=b.person_id
+                                                    and (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                                                    and note_type_concept_id in (@note_type)
+                                                  group by gender_concept_id, year_of_birth
+                                                  order by year_of_birth"
+                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], note_type=input$note_type)
+                                    }
                                       
                                       result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
                                       result$GENDER_CONCEPT_ID <- factor(result$GENDER_CONCEPT_ID)
@@ -252,6 +271,7 @@ runApp(shinyApp(
                   
                   # date  
                   output$date <- renderPlotly({
+                                    if(exists("input$resultdb")==T){
                                       sql <- "select left(note_date,4) as date, note_type_concept_id, count(note_id) cnt 
                                               from NOTE 
                                               where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
@@ -259,6 +279,14 @@ runApp(shinyApp(
                                                 and note_type_concept_id in (@note_type)
                                               group by left(note_date,4), note_type_concept_id"
                                       sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+                                    } else{
+                                      sql <- "select left(note_date,4) as date, note_type_concept_id, count(note_id) cnt 
+                                              from NOTE 
+                                              where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
+                                                and note_type_concept_id in (@note_type)
+                                              group by left(note_date,4), note_type_concept_id"
+                                      sql <- SqlRender::render(sql, min=input$date[1], max=input$date[2], note_type=input$note_type)
+                                    }
                                       
                                       result <- data.frame(DatabaseConnector::querySql(connection=connection, sql))
                                       result$NOTE_TYPE_CONCEPT_ID <- factor(result$NOTE_TYPE_CONCEPT_ID)
@@ -266,15 +294,6 @@ runApp(shinyApp(
                                       plotly::ggplotly(ggplot(result, aes(x=DATE, y=CNT, fill=NOTE_TYPE_CONCEPT_ID)) + geom_bar(stat = "identity", position = "stack") + 
                                                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
                                 })
-                 
-                  # downloas button
-                  # output$process <- downloadHandler(
-                  #                       filename = function(){
-                  #                                     paste0('process', ".rds")
-                  #                       }
-                  #                       , content = function(file){
-                  #                                     saveRDS(processSetting(),file)
-                  #                 })
                   
                   # LDAvis
                   VisSetting <- eventReactive(input$visButton,{
@@ -328,18 +347,15 @@ runApp(shinyApp(
                       test <<- fromJSON(input$jsedOutput)
                     })
                     
-                    output$SchemaText <- renderText(input$jsedOutput)
-                    
                     output$DownloadSchema <- downloadHandler(
                       filename = function(){paste0('DownloadSchema', ".json")}
                       , content = function(file){write(jsonlite::fromJSON(input$Save_Schema), 'JSONSchema.json')}
                     )
                     
                     # Text output
-                    
                     output$note <- renderText({noteText[as.numeric(input$num)]})
                     
-                    # JSON Editor
+                    # JSON Annotation
                     output$annot <- renderJsonedit({
                       jsonedit(jsonList <<- Json[as.numeric(input$num)]
                                ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
