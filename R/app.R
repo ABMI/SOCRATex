@@ -7,6 +7,10 @@ library(servr)
 library(ggplot2)
 library(shiny)
 library(shinyjs)
+library(shinyWidgets)
+library(modeltools)
+library(topicmodels)
+library(LDAvis)
 
 # N gram tokenizers
 UnigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1), paste, collapse = " "), use.names = FALSE)}
@@ -42,7 +46,7 @@ preprocess <- function(text, english = F, whitespace = F, stopwords = F, number 
 
 # Rshiny Application
 runApp(shinyApp(
-  ui <- (navbarPage(theme = shinythemes::shinytheme("sandstone")
+  ui <- (navbarPage(theme = shinythemes::shinytheme("spacelab")
                     , "SOCRATex"
                     , navbarMenu("Extraction"
                                  , tabPanel("DB Connection"
@@ -107,9 +111,11 @@ runApp(shinyApp(
                                             , fluidPage(sidebarPanel(width = 3
                                                                      , fileInput("UploadSchema", "Upload"
                                                                                  ,accept = c("text/rds","text/plain",".rds", ".json"))
-                                                                     , actionButton("UpdateSchema", 'Update JSON') 
+                                                                     , actionButton("UpdateSchema", 'Update JSON')
                                                                      , downloadButton('DownloadSchema', 'Download Schema'))
-                                                        , mainPanel(listviewer::jsoneditOutput("Schema"))
+                                                        , mainPanel(jsoneditOutput("Schema", height="800px")
+                                                                    , verbatimTextOutput('SchemaText')
+                                                        )
                                             ))
                                  
                                  , tabPanel("JSON Annotation"
@@ -287,36 +293,40 @@ runApp(shinyApp(
     })
     
     #JSON Schema
-    ## jsonList <- "\"Sample\":\"JSON\"\"
-    ## jsonList <- jsonlite::fromJSON((input$UploadSchema)$datapath)
-    output$Schema <- listviewer::renderJsonedit({
-      listviewer::jsonedit(jsonList <- jsonlite::fromJSON((input$UploadSchema)$datapath)
-               ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Schema'})[0].editor.getText()
-                                                             console.log(txt)
-                                                             Shiny.onInputChange('jsedOutput',txt)}")
+    output$Schema <- renderJsonedit({
+      jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){
+        jsonList <- '{"sample":"test"}'
+      }
+      else{
+        jsonList <- input$UploadSchema$datapath
+      }
+      )
+      ,"onChange" = htmlwidgets::JS("() => {
+                var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Schema'})[0].editor.getText()
+                console.log(txt)
+                Shiny.onInputChange('jsedOutput',txt)}")
       )
     })
     
-    eventReactive(input$UpdateSchema,{
-      test <<- jsonlite::fromJSON(input$jsedOutput)
+    output$SchemaText <- renderText(input$jsedOutput)
+    
+    observeEvent(input$UpdateSchema,{
+      validationJson <<- input$jsedOutput
     })
     
     output$DownloadSchema <- downloadHandler(
       filename = function(){paste0('DownloadSchema', ".json")}
-      , content = function(file){write(jsonlite::fromJSON(input$Save_Schema), 'JSONSchema.json')}
+      , content = function(file){write(jsonlite::toJSON(validationJson), file)}
     )
     
-    # Text output
-    output$note <- renderText({noteText[as.numeric(input$num)]})
-    
-    # JSON Annotation
+    # # JSON Annotation
     output$annot <- listviewer::renderJsonedit({
       listviewer::jsonedit(jsonList <<- Json[as.numeric(input$num)]
                ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
                                                              console.log(txt)
                                                              Shiny.onInputChange('saveJson',txt)}")
       )
-      
+
     })
     
     errorReportSetting <- eventReactive(input$button,{
