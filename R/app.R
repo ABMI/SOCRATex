@@ -360,21 +360,20 @@ runApp(shinyApp(
       , content = function(file){write(jsonlite::toJSON(validationJson2), file)}
     )
     
-    # # JSON Annotation
+    # JSON Annotation
     output$annot <- listviewer::renderJsonedit({
-      listviewer::jsonedit(JSONannotation <<- validateJSON2
-                           ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
-                                                             console.log(txt)
-                                                             Shiny.onInputChange('saveJson',txt)}"))
+      listviewer::jsonedit(JSONannotation <<- validationJson2
+                           ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'annot'})[0].editor.getText()
+                                                         console.log(txt)
+                                                         Shiny.onInputChange('saveJson',txt)}"))
     })
     
-    # Text output
     output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
     
     errorReportSetting <- eventReactive(input$button,{
       if(is.null(input$saveJson)){
-        v <- jsonvalidate::json_validator(validateJSON)
-        errorInfo <- v(JSONannotation, verbose=TRUE, greedy=TRUE)
+        v <<- jsonvalidate::json_validator(validationJson)
+        errorInfo <<- v(JSONannotation, verbose=TRUE, greedy=TRUE)
         
         if(errorInfo[1] ==TRUE)
           errorInfo[1] = 'Validate!'
@@ -384,13 +383,14 @@ runApp(shinyApp(
         }
       }
       else{
-        JSON[as.numeric(input$num)] <- input$saveJson
-        v <- jsonvalidate::json_validator(validateJSON)
-        errorInfo <- v(input$saveJson, verbose=TRUE, greedy=TRUE)
+        JSON[as.numeric(input$num)] <<- input$saveJson
+        v <<- jsonvalidate::json_validator(validationJson)
+        errorInfo <<- v(input$saveJson, verbose=TRUE, greedy=TRUE)
         if(errorInfo[1] == TRUE){
+          errorInfo[1] = 'Validate!'
           # save
           # jsonFile <- jsonFile[as.numeric(input$num),'json']
-          # write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F) ## Saving Method
+          # write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F)
         }
         else{
           df <- attr(errorInfo,'error')
@@ -405,6 +405,6 @@ runApp(shinyApp(
     
     output$errorReport <- renderText({
       as.character(errorReportSetting())
-    })    
+    })  
   })
 ))
