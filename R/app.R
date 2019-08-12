@@ -117,6 +117,16 @@ runApp(shinyApp(
                                                                     , verbatimTextOutput('SchemaText')
                                                         )
                                             ))
+                                 , tabPanel("JSON Structure"
+                                            , fluidPage(sidebarPanel(width = 3
+                                                                     , fileInput("UploadTemplate", "Upload"
+                                                                                 ,accept = c("text/rds","text/plain",".rds", ".json"))
+                                                                     , actionButton("UpdateTemplate", 'Update JSON')
+                                                                     , downloadButton('DownloadTemplate', 'Download Template'))
+                                                        , mainPanel(jsoneditOutput("Template", height="800px")
+                                                                    , verbatimTextOutput('TemplateText')
+                                                        )
+                                            ))
                                  
                                  , tabPanel("JSON Annotation"
                                             , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
@@ -159,8 +169,8 @@ runApp(shinyApp(
         sql <- "select distinct note_type_concept_id from NOTE" 
         typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1]) 
         shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
-                    ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
-                    ,multiple=T)
+                                  ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                  ,multiple=T)
       }
     })
     
@@ -177,6 +187,7 @@ runApp(shinyApp(
         sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
         
         Text <<- DatabaseConnector::querySql(connection, sql)
+        JSON <<- c()
         
         if(exists("input$dictionary_table")==T){
           Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)  
@@ -195,6 +206,7 @@ runApp(shinyApp(
         sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
         
         Text <<- DatabaseConnector::querySql(connection, sql)
+        JSON <<- c()
         
         if(exists("input$dictionary_table")==T){
           Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)  
@@ -308,36 +320,61 @@ runApp(shinyApp(
       )
     })
     
-    output$SchemaText <- renderText(input$jsedOutput)
+    # output$SchemaText <- renderText(input$jsedOutput)
     
     observeEvent(input$UpdateSchema,{
-      validationJson <<- input$jsedOutput
+      validateJSON <<- input$jsedOutput
     })
     
     output$DownloadSchema <- downloadHandler(
       filename = function(){paste0('DownloadSchema', ".json")}
-      , content = function(file){write(jsonlite::toJSON(validationJson), file)}
+      , content = function(file){write(jsonlite::toJSON(validateJSON), file)}
+    )
+    
+    #JSON Structure
+    output$Template <- renderJsonedit({
+      jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadTemplate$datapath)){
+        jsonList <- '{"sample":"test"}'
+      }
+      else{
+        jsonList <- input$UploadTemplate$datapath
+      }
+      )
+      ,"onChange" = htmlwidgets::JS("() => {
+                var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Template'})[0].editor.getText()
+                console.log(txt)
+                Shiny.onInputChange('jsedOutput2',txt)}")
+      )
+    })
+    
+    output$TemplateText <- renderText(input$jsedOutput2)
+    
+    observeEvent(input$UpdateTemplate,{
+      
+      validationJson2 <<- input$jsedOutput2
+      
+    })
+    
+    output$DownloadTemplate <- downloadHandler(
+      filename = function(){paste0('DownloadTemplate', ".json")}
+      , content = function(file){write(jsonlite::toJSON(validationJson2), file)}
     )
     
     # # JSON Annotation
     output$annot <- listviewer::renderJsonedit({
-      listviewer::jsonedit(jsonList <<- Json[as.numeric(input$num)]
-               ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
+      listviewer::jsonedit(JSONannotation <<- validateJSON2
+                           ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'jsed'})[0].editor.getText()
                                                              console.log(txt)
-                                                             Shiny.onInputChange('saveJson',txt)}")
-      )
-
+                                                             Shiny.onInputChange('saveJson',txt)}"))
     })
+    
+    # Text output
+    output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
     
     errorReportSetting <- eventReactive(input$button,{
       if(is.null(input$saveJson)){
-        v <- jsonvalidate::json_validator(schema)
-        errorInfo <- v(jsonList, verbose=TRUE, greedy=TRUE)
-        # if(errorInfo[1] == TRUE){
-        #   #save
-        #   jsonFile <- jsonFile[as.numeric(input$num),'json']
-        #   write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F)
-        # }
+        v <- jsonvalidate::json_validator(validateJSON)
+        errorInfo <- v(JSONannotation, verbose=TRUE, greedy=TRUE)
         
         if(errorInfo[1] ==TRUE)
           errorInfo[1] = 'Validate!'
@@ -347,13 +384,13 @@ runApp(shinyApp(
         }
       }
       else{
-        jsonList[] <- input$saveJson
-        v <- jsonvalidate::json_validator(schema)
+        JSON[as.numeric(input$num)] <- input$saveJson
+        v <- jsonvalidate::json_validator(validateJSON)
         errorInfo <- v(input$saveJson, verbose=TRUE, greedy=TRUE)
         if(errorInfo[1] == TRUE){
-          #save
-          jsonFile <- jsonFile[as.numeric(input$num),'json']
-          write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F)
+          # save
+          # jsonFile <- jsonFile[as.numeric(input$num),'json']
+          # write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F) ## Saving Method
         }
         else{
           df <- attr(errorInfo,'error')
