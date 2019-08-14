@@ -1,0 +1,39 @@
+Package: SOCRATex
+Title: Staged Optimization of Curation, Regularization, and Annotation of clinical Text.
+Version: 0.0.0.9000
+Authors@R: c(
+      person("Jimyung", "Park", role=c("aut", "cre"), email = "cory66421@gmail.com"),
+      person("Seng Chan", "You", role="aut", email = "applegna@gmail.com"),
+      person("Dongsu", "Park", role="ctb", email = "dongsu2005@naver.com")
+      )
+Description: SOCRATex is an open source NLP system based on OMOP CDM. 
+Depends: R (>= 3.4.4)
+License: -
+Encoding: UTF-8
+LazyData: true
+URL: https://github.com/ABMI/SOCRATex
+BugReports: https://github.com/ABMI/SOCRATex/issues
+Imports:
+  shiny,
+  shinyjs,
+  shinythemes
+  elastic,
+  jsonlite,
+  jsonvalidate,
+  listviewer,
+  LDAvis,
+  SnowballC,
+  tm,
+  topicmodels,
+  htmlwidgets
+Suggests:
+  ployly,
+  shinyWidgets,
+  DatabaseConnector,
+  SqlRender,
+  stringi,
+  xlsx,
+  rJava,
+  shinyFiles,
+  DT
+RoxygenNote: 6.1.1
