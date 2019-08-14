@@ -5,7 +5,7 @@ shinyApp(
                                  , tabPanel("DB Connection"
                                             , fluidRow(column(12
                                                               , align='center'
-                                                              #, useShinyjs()
+                                                              , useShinyjs()
                                                               , textInput('ip_address', 'IP address', '', placeholder = 'ex) ???.???.???.???')
                                                               , textInput('database_schema', 'Database schema', '', placeholder = 'ex) DBName')
                                                               , textInput('user', 'User ID', '', placeholder = 'ex) Admin')
