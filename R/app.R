@@ -43,6 +43,25 @@ preprocess <- function(text, english = F, whitespace = F, stopwords = F, number 
   return(DTM)
 }
 
+# Elasticsearch
+jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = F){
+  json_list<- list.files(json_path,pattern = "*.json$",full.names = T)
+  dataset <- lapply(json_list, function(json) {fromJSON(json)})
+  if(elastic::index_exists(esConnection,indexName)){
+    if(dropIfExist){
+      elastic::index_delete(esConnection,indexName)
+    }
+  }
+  else{
+    elastic::index_create(esConnection, indexName)
+  }
+  
+  for(i in 1:length(dataset)){
+    print(paste0(i,"/",length(dataset)," bulk uploading..."))
+    elastic::docs_bulk(esConnection,dataset[[i]],indexName)
+  }
+  print("Jobs done!")
+}
 
 # Rshiny Application
 runApp(shinyApp(
@@ -138,6 +157,18 @@ runApp(shinyApp(
                                             , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
                                             , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                             ))
+                    )
+                    , navbarMenu("Elasticsearch"
+                                 , fluidRow(column(12
+                                                   , align='center'
+                                                   , useShinyjs()
+                                                   , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
+                                                   #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                                                   , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
+                                                   , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
+                                                   #, shinyFiles::shinyDirButton('JSONFolder', 'Folder select', 'Please select a folder', FALSE)
+                                                   , actionButton('send', 'Send'))
+                                 )            
                     )
   ))
   
@@ -405,6 +436,16 @@ runApp(shinyApp(
     
     output$errorReport <- renderText({
       as.character(errorReportSetting())
-    })  
+    })
+    
+    # Elasticsearch
+    observeEvent(input$Send, {
+      if(exists(input$host|input$port)==T){
+        esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
+      } else{
+        esConnection <- elastic::connect(errors='complete')
+      }
+      jsonToES(connection, jsonFolder = json_path, dropIfExist = T)
+    })
   })
 ))
