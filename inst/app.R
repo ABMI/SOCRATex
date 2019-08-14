@@ -188,7 +188,7 @@ shinyApp(
     })
 
     # table
-    output$count <- renderDataTable({
+    output$count <- DT::renderDataTable({
       person <- Text %>% select(PERSON_ID) %>% distinct() %>% count()
       note <- Text %>% select(NOTE_ID) %>% count()
 
@@ -378,7 +378,7 @@ shinyApp(
       } else{
         esConnection <- elastic::connect(errors='complete')
       }
-      jsonToES(connection, jsonFolder = json_path, dropIfExist = T)
+      jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
     })
   })
 )

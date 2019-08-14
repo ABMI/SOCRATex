@@ -7,11 +7,12 @@
 #' @param esConnection  a connection with Elasticsearch
 #' @param indexName     an index name to send Elasticsearch
 #' @param jsonFolder    a folder which contains the JSON documents
+#' @param dropIfExist  If TRUE then delete existing Index in Elasticsearch
 #'
 #' @export
 
 jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = F){
-  json_list<- list.files(json_path,pattern = "*.json$",full.names = T)
+  json_list<- list.files(jsonFolder,pattern = "*.json$",full.names = T)
   dataset <- lapply(json_list, function(json) {fromJSON(json)})
   if(elastic::index_exists(esConnection,indexName)){
     if(dropIfExist){

@@ -2,6 +2,7 @@
 #'
 #' This is a uni-gram tokenizer for creating Document-Term Matrix
 #'
+#' @param x   text data which can be tokenized
 #' @import tm
 #'
 #' @export
