@@ -1,3 +1,15 @@
+#' jsonToES function
+#'
+#' This is a function to send JSON documents to Elasticsearch
+#'
+#' @import elastic
+#'
+#' @param esConnection  a connection with Elasticsearch
+#' @param indexName     an index name to send Elasticsearch
+#' @param jsonFolder    a folder which contains the JSON documents
+#'
+#' @export
+
 jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = F){
   json_list<- list.files(json_path,pattern = "*.json$",full.names = T)
   dataset <- lapply(json_list, function(json) {fromJSON(json)})
@@ -9,7 +21,7 @@ jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = F){
   else{
     elastic::index_create(esConnection, indexName)
   }
-  
+
   for(i in 1:length(dataset)){
     print(paste0(i,"/",length(dataset)," bulk uploading..."))
     elastic::docs_bulk(esConnection,dataset[[i]],indexName)
