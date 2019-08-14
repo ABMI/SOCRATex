@@ -16,7 +16,7 @@ shinyApp(
                                             )
                                  )
                                  , tabPanel("Preprocessing"
-                                            , sidebarPanel(switchInput("type", "Type", value=F)
+                                            , sidebarPanel(shinyWidgets::switchInput("type", "Type", value=F)
                                                            , uiOutput("typeOutput")
                                                            , sliderInput("num", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
                                                            , sliderInput("date", "Dates", min = 1990, max = 2019, value = c(2012, 2018), step = 1)
