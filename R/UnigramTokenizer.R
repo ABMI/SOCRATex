@@ -4,6 +4,8 @@
 #'
 #' @param x   text data which can be tokenized
 #' @import tm
+#' @importFrom NLP ngrams
+#' @importFrom NLP words
 #'
 #' @export
 

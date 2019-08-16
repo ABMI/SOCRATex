@@ -5,7 +5,7 @@ shinyApp(
                                  , tabPanel("DB Connection"
                                             , fluidRow(column(12
                                                               , align='center'
-                                                              , useShinyjs()
+                                                              , shinyjs::useShinyjs()
                                                               , textInput('ip_address', 'IP address', '', placeholder = 'ex) ???.???.???.???')
                                                               , textInput('database_schema', 'Database schema', '', placeholder = 'ex) DBName')
                                                               , textInput('user', 'User ID', '', placeholder = 'ex) Admin')
@@ -31,7 +31,6 @@ shinyApp(
                                                            , actionButton('process', 'Pre-Process')
                                                            , width="2"))
                     )
-
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
                                             , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
@@ -49,8 +48,7 @@ shinyApp(
                                                                               , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01))
                                                                               , column(3, sliderInput('sample','Number of Samples',min=1,max=20,value = 5, step=1))
                                                                               , column(11, align='right', offset = 1, actionButton('visButton','GO')))
-                                                                     , fluidRow(column(12, LDAvis::visOutput('LDAModel'))
-                                                                     )
+                                                                     , fluidRow(column(12, LDAvis::visOutput('LDAModel')))
                                                                    )
                                             ), tabPanel("LDA Sample"
                                                         , fluidPage(fluidRow(
@@ -58,7 +56,6 @@ shinyApp(
                                                         )))
                                             ))
                     )
-
                     , navbarMenu("Annotation"
                                  , tabPanel("JSON schema"
                                             , fluidPage(sidebarPanel(width = 3
@@ -66,7 +63,7 @@ shinyApp(
                                                                                  ,accept = c("text/rds","text/plain",".rds", ".json"))
                                                                      , actionButton("UpdateSchema", 'Update JSON')
                                                                      , downloadButton('DownloadSchema', 'Download Schema'))
-                                                        , mainPanel(jsoneditOutput("Schema", height="800px")
+                                                        , mainPanel(listviewer::jsoneditOutput("Schema", height="800px")
                                                                     , verbatimTextOutput('SchemaText')
                                                         )
                                             ))
@@ -76,11 +73,10 @@ shinyApp(
                                                                                  ,accept = c("text/rds","text/plain",".rds", ".json"))
                                                                      , actionButton("UpdateTemplate", 'Update JSON')
                                                                      , downloadButton('DownloadTemplate', 'Download Template'))
-                                                        , mainPanel(jsoneditOutput("Template", height="800px")
+                                                        , mainPanel(listviewer::jsoneditOutput("Template", height="800px")
                                                                     , verbatimTextOutput('TemplateText')
                                                         )
                                             ))
-
                                  , tabPanel("JSON Annotation"
                                             , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
                                                                         actionButton("click", "Click")
@@ -99,7 +95,6 @@ shinyApp(
                                                    #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
                                                    , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
                                                    , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
-                                                   #, shinyFiles::shinyDirButton('JSONFolder', 'Folder select', 'Please select a folder', FALSE)
                                                    , actionButton('send', 'Send'))
                                  )
                     )
@@ -117,7 +112,6 @@ shinyApp(
     })
 
     observeEvent(input$connect,{
-
       DBcon <<- DBconnection()
 
       if(DatabaseConnector::dbIsValid(connection)==TRUE){
@@ -140,7 +134,6 @@ shinyApp(
 
     # preprocessing
     observeEvent(input$process,{
-
       if(exists("input$resultdb")==T){
         sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
@@ -158,9 +151,9 @@ shinyApp(
           Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
         } else{Text_corpus <<- Text$NOTE_TEXT}
 
-        filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+        dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
                                 , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-        rownames(filedata) <<- Text$NOTE_ID
+        rownames(dtm) <<- Text$NOTE_ID
       } else{
         sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
@@ -177,27 +170,27 @@ shinyApp(
           Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
         } else{Text_corpus <<- Text$NOTE_TEXT}
 
-        filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+        dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
                                 , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-        rownames(filedata) <<- Text$NOTE_ID
+        rownames(dtm) <<- Text$NOTE_ID
       }
 
-      if(exists("filedata")==TRUE){
+      if(exists("dtm")==TRUE){
         showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
       }
     })
 
-    # table
+    # personTable
     output$count <- DT::renderDataTable({
       person <- Text %>% select(PERSON_ID) %>% distinct() %>% count()
       note <- Text %>% select(NOTE_ID) %>% count()
 
-      table <- as.data.frame(rbind(person, note))
+      personTable <- as.data.frame(rbind(person, note))
 
-      rownames(table) <- c("Person", "Note")
-      colnames(table) <- c("Count")
+      rownames(personTable) <- c("Person", "Note")
+      colnames(personTable) <- c("Count")
 
-      table
+      personTable
     })
 
     # pie chart
@@ -206,7 +199,7 @@ shinyApp(
       pie <- as.data.frame(pie)
       colnames(pie) <- c("NoteType", "Count")
 
-      plot_ly(pie, labels = ~pie$NoteType, values=pie$Count, type="pie") %>% layout(title="The Proportions of Note Types of Data")
+      plotly::plot_ly(pie, labels = ~pie$NoteType, values=pie$Count, type="pie") %>% layout(title="The Proportions of Note Types of Data")
     })
 
     # Age
@@ -234,18 +227,18 @@ shinyApp(
 
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{
-      fit <- topicmodels::LDA(filedata, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
-      phi <- posterior(fit)$terms %>% as.matrix
-      theta <<- posterior(fit)$topics %>% as.matrix
+      fit <- topicmodels::LDA(dtm, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
+      phi <- modeltools::posterior(fit)$terms %>% as.matrix
+      theta <<- modeltools::posterior(fit)$topics %>% as.matrix
       vocab <- colnames(phi)
       doc_length <- c()
 
       for(i in 1:length(Text_corpus)) {
         temp <- paste(Text_corpus, collapse=" ")
-        doc_length <- c(doc_length, stri_count(temp, regex='\\S+'))
+        doc_length <- c(doc_length, stringi::stri_count(temp, regex='\\S+'))
       }
 
-      temp_frequency <- as.matrix(filedata)
+      temp_frequency <- as.matrix(dtm)
       freq_matrix <- data.frame(ST=colnames(temp_frequency),
                                 Freq=colSums(temp_frequency))
       rm(temp_frequency)
@@ -269,8 +262,8 @@ shinyApp(
     })
 
     #JSON Schema
-    output$Schema <- renderJsonedit({
-      jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){
+    output$Schema <- listviewer::renderJsonedit({
+      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){
         jsonList <- '{"sample":"test"}'
       }
       else{
@@ -296,8 +289,8 @@ shinyApp(
     )
 
     #JSON Structure
-    output$Template <- renderJsonedit({
-      jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadTemplate$datapath)){
+    output$Template <- listviewer::renderJsonedit({
+      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadTemplate$datapath)){
         jsonList <- '{"sample":"test"}'
       }
       else{

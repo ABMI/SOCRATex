@@ -7,32 +7,36 @@ Authors@R: c(
       person("Dongsu", "Park", role="ctb", email = "dongsu2005@naver.com")
       )
 Description: SOCRATex is an open source NLP system based on OMOP CDM. 
-Depends: R (>= 3.4.4)
-License: Apache License Version 2.0
-Encoding: UTF-8
-LazyData: true
-URL: https://github.com/ABMI/SOCRATex
-BugReports: https://github.com/ABMI/SOCRATex/issues
-Depends:
+Depends: 
+  R (>= 3.4.4),
   shiny,
-  shinyjs,
-  shinythemes,
   shinyWidgets,
-  elastic,
-  jsonlite,
-  jsonvalidate,
-  listviewer,
-  LDAvis,
   SnowballC,
   tm,
   topicmodels,
   htmlwidgets,
   plotly,
+  rJava,
+  dplyr
+Imports:
   DatabaseConnector,
   SqlRender,
+  NLP,
+  modeltools,
   stringi,
-  xlsx,
-  rJava,
-  shinyFiles,
+  shinyjs,
+  shinythemes,
+  elastic,
+  jsonlite,
+  jsonvalidate,
+  listviewer,
+  LDAvis,
   DT
+Suggests:
+  xlsx
+License: Apache License Version 2.0
+Encoding: UTF-8
+LazyData: true
+URL: https://github.com/ABMI/SOCRATex
+BugReports: https://github.com/ABMI/SOCRATex/issues
 RoxygenNote: 6.1.1
