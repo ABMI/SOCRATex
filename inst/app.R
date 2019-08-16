@@ -1,11 +1,11 @@
-runApp(shinyApp(
+shinyApp(
   ui <- (navbarPage(theme = shinythemes::shinytheme("spacelab")
                     , "SOCRATex"
                     , navbarMenu("Extraction"
                                  , tabPanel("DB Connection"
                                             , fluidRow(column(12
                                                               , align='center'
-                                                              , useShinyjs()
+                                                              , shinyjs::useShinyjs()
                                                               , textInput('ip_address', 'IP address', '', placeholder = 'ex) ???.???.???.???')
                                                               , textInput('database_schema', 'Database schema', '', placeholder = 'ex) DBName')
                                                               , textInput('user', 'User ID', '', placeholder = 'ex) Admin')
@@ -16,7 +16,7 @@ runApp(shinyApp(
                                             )
                                  )
                                  , tabPanel("Preprocessing"
-                                            , sidebarPanel(switchInput("type", "Type", value=F)
+                                            , sidebarPanel(shinyWidgets::switchInput("type", "Type", value=F)
                                                            , uiOutput("typeOutput")
                                                            , sliderInput("num", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
                                                            , sliderInput("date", "Dates", min = 1990, max = 2019, value = c(2012, 2018), step = 1)
@@ -31,7 +31,6 @@ runApp(shinyApp(
                                                            , actionButton('process', 'Pre-Process')
                                                            , width="2"))
                     )
-                    
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
                                             , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
@@ -49,8 +48,7 @@ runApp(shinyApp(
                                                                               , column(3, sliderInput('alphaNum','alpha',min=0,max=1,value = 0.2, step=0.01))
                                                                               , column(3, sliderInput('sample','Number of Samples',min=1,max=20,value = 5, step=1))
                                                                               , column(11, align='right', offset = 1, actionButton('visButton','GO')))
-                                                                     , fluidRow(column(12, LDAvis::visOutput('LDAModel'))
-                                                                     )
+                                                                     , fluidRow(column(12, LDAvis::visOutput('LDAModel')))
                                                                    )
                                             ), tabPanel("LDA Sample"
                                                         , fluidPage(fluidRow(
@@ -58,7 +56,6 @@ runApp(shinyApp(
                                                         )))
                                             ))
                     )
-                    
                     , navbarMenu("Annotation"
                                  , tabPanel("JSON schema"
                                             , fluidPage(sidebarPanel(width = 3
@@ -66,7 +63,7 @@ runApp(shinyApp(
                                                                                  ,accept = c("text/rds","text/plain",".rds", ".json"))
                                                                      , actionButton("UpdateSchema", 'Update JSON')
                                                                      , downloadButton('DownloadSchema', 'Download Schema'))
-                                                        , mainPanel(jsoneditOutput("Schema", height="800px")
+                                                        , mainPanel(listviewer::jsoneditOutput("Schema", height="800px")
                                                                     , verbatimTextOutput('SchemaText')
                                                         )
                                             ))
@@ -76,11 +73,10 @@ runApp(shinyApp(
                                                                                  ,accept = c("text/rds","text/plain",".rds", ".json"))
                                                                      , actionButton("UpdateTemplate", 'Update JSON')
                                                                      , downloadButton('DownloadTemplate', 'Download Template'))
-                                                        , mainPanel(jsoneditOutput("Template", height="800px")
+                                                        , mainPanel(listviewer::jsoneditOutput("Template", height="800px")
                                                                     , verbatimTextOutput('TemplateText')
                                                         )
                                             ))
-                                 
                                  , tabPanel("JSON Annotation"
                                             , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
                                                                         actionButton("click", "Click")
@@ -95,17 +91,15 @@ runApp(shinyApp(
                     , navbarMenu("Elasticsearch"
                                  , fluidRow(column(12
                                                    , align='center'
-                                                   , useShinyjs()
                                                    , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
                                                    #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
                                                    , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
                                                    , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
-                                                   #, shinyFiles::shinyDirButton('JSONFolder', 'Folder select', 'Please select a folder', FALSE)
                                                    , actionButton('send', 'Send'))
-                                 )            
+                                 )
                     )
   ))
-  
+
   , server <- (function(input, output){
     # Database Connection
     DBconnection <- reactive({
@@ -116,32 +110,30 @@ runApp(shinyApp(
                                                                        , password=input$password)
       connection <<- DatabaseConnector::connect(connectionDetails)
     })
-    
+
     observeEvent(input$connect,{
-      
       DBcon <<- DBconnection()
-      
+
       if(DatabaseConnector::dbIsValid(connection)==TRUE){
         showModal(modalDialog(
           title = "Messeage", "Database connection success!!", easyClose = T, footer=modalButton("cancel"), size = "l"
         ))
       }
     })
-    
-    # picker    
+
+    # picker
     output$typeOutput <- renderUI({
       if(input$type == T){
-        sql <- "select distinct note_type_concept_id from NOTE" 
-        typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1]) 
+        sql <- "select distinct note_type_concept_id from NOTE"
+        typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1])
         shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
                                   ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
                                   ,multiple=T)
       }
     })
-    
+
     # preprocessing
     observeEvent(input$process,{
-      
       if(exists("input$resultdb")==T){
         sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
@@ -149,108 +141,108 @@ runApp(shinyApp(
                               and note_type_concept_id in (@note_type)
                               and a.person_id=b.person_id
                             order by newid()"
-        sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
-        
+        sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+
         Text <<- DatabaseConnector::querySql(connection, sql)
         JSON <<- c()
-        
+
         if(exists("input$dictionary_table")==T){
-          Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)  
+          Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
           Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
         } else{Text_corpus <<- Text$NOTE_TEXT}
-        
-        filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+
+        dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
                                 , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-        rownames(filedata) <<- Text$NOTE_ID
+        rownames(dtm) <<- Text$NOTE_ID
       } else{
         sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
                               and note_type_concept_id in (@note_type)
                               and a.person_id=b.person_id
                             order by newid()"
-        sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)  
-        
+        sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+
         Text <<- DatabaseConnector::querySql(connection, sql)
         JSON <<- c()
-        
+
         if(exists("input$dictionary_table")==T){
-          Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)  
+          Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
           Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
         } else{Text_corpus <<- Text$NOTE_TEXT}
-        
-        filedata <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+
+        dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
                                 , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-        rownames(filedata) <<- Text$NOTE_ID
+        rownames(dtm) <<- Text$NOTE_ID
       }
-      
-      if(exists("filedata")==TRUE){
+
+      if(exists("dtm")==TRUE){
         showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
       }
     })
-    
-    # table
-    output$count <- renderDataTable({
+
+    # personTable
+    output$count <- DT::renderDataTable({
       person <- Text %>% select(PERSON_ID) %>% distinct() %>% count()
       note <- Text %>% select(NOTE_ID) %>% count()
-      
-      table <- as.data.frame(rbind(person, note))
-      
-      rownames(table) <- c("Person", "Note")  
-      colnames(table) <- c("Count")
-      
-      table
+
+      personTable <- as.data.frame(rbind(person, note))
+
+      rownames(personTable) <- c("Person", "Note")
+      colnames(personTable) <- c("Count")
+
+      personTable
     })
-    
+
     # pie chart
     output$pie <- plotly::renderPlotly({
       pie <- Text %>% group_by(NOTE_TYPE_CONCEPT_ID) %>% select(NOTE_ID) %>% count(NOTE_TYPE_CONCEPT_ID)
       pie <- as.data.frame(pie)
       colnames(pie) <- c("NoteType", "Count")
-      
-      plot_ly(pie, labels = ~pie$NoteType, values=pie$Count, type="pie") %>% layout(title="The Proportions of Note Types of Data")
+
+      plotly::plot_ly(pie, labels = ~pie$NoteType, values=pie$Count, type="pie") %>% layout(title="The Proportions of Note Types of Data")
     })
-    
+
     # Age
     output$age <- plotly::renderPlotly({
       age <- Text %>% group_by(YEAR_OF_BIRTH, GENDER_CONCEPT_ID) %>% select(YEAR_OF_BIRTH, GENDER_CONCEPT_ID) %>% count(YEAR_OF_BIRTH, GENDER_CONCEPT_ID)
       age <-as.data.frame(age)
       colnames(age) <- c("BirthYear", "Gender", "Count")
       age$Gender <- factor(age$Gender)
-      
+
       plotly::ggplotly(ggplot(age, aes(x=BirthYear, y=Count, color=Gender))
-                       + geom_line(size=1) + theme_minimal() + scale_color_manual(values = c("#3300FF", "#FF9933")))  
+                       + geom_line(size=1) + theme_minimal() + scale_color_manual(values = c("#3300FF", "#FF9933")))
     })
-    
-    # date  
+
+    # date
     output$date <- plotly::renderPlotly({
       Text$NOTE_DATE <- Text$NOTE_DATE %>% substring(1, 4)
       date <- Text %>% group_by(NOTE_DATE, NOTE_TYPE_CONCEPT_ID) %>% select(NOTE_DATE, NOTE_TYPE_CONCEPT_ID) %>% count(NOTE_DATE, NOTE_TYPE_CONCEPT_ID)
       date <- as.data.frame(date)
       date$NOTE_TYPE_CONCEPT_ID <- factor(date$NOTE_TYPE_CONCEPT_ID)
       colnames(date) <- c("NoteDate", "NoteType", "Count")
-      
-      plotly::ggplotly(ggplot(date, aes(x=NoteDate, y=Count, fill=NoteType)) + geom_bar(stat = "identity", position = "stack") + 
+
+      plotly::ggplotly(ggplot(date, aes(x=NoteDate, y=Count, fill=NoteType)) + geom_bar(stat = "identity", position = "stack") +
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
-    
+
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{
-      fit <- topicmodels::LDA(filedata, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
-      phi <- posterior(fit)$terms %>% as.matrix
-      theta <<- posterior(fit)$topics %>% as.matrix
+      fit <- topicmodels::LDA(dtm, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
+      phi <- modeltools::posterior(fit)$terms %>% as.matrix
+      theta <<- modeltools::posterior(fit)$topics %>% as.matrix
       vocab <- colnames(phi)
       doc_length <- c()
-      
+
       for(i in 1:length(Text_corpus)) {
         temp <- paste(Text_corpus, collapse=" ")
-        doc_length <- c(doc_length, stri_count(temp, regex='\\S+'))
+        doc_length <- c(doc_length, stringi::stri_count(temp, regex='\\S+'))
       }
-      
-      temp_frequency <- as.matrix(filedata)
+
+      temp_frequency <- as.matrix(dtm)
       freq_matrix <- data.frame(ST=colnames(temp_frequency),
                                 Freq=colSums(temp_frequency))
       rm(temp_frequency)
-      
+
       json_lda <- LDAvis::createJSON(phi=phi,
                                      theta=theta,
                                      vocab=vocab,
@@ -258,20 +250,20 @@ runApp(shinyApp(
                                      term.frequency=freq_matrix$Freq)
       json_lda
     })
-    
+
     output$LDAModel <- LDAvis::renderVis({VisSetting()})
-    
+
     output$SampleTopic <- DT::renderDataTable({
       for(i in 1:input$topicNum){
         assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
         assign(paste0("Sample",1), bind_rows(get(paste0("Sample",1)), get(paste0("Sample",i))))
-      } 
+      }
       return(unique(Sample1))
     })
-    
+
     #JSON Schema
-    output$Schema <- renderJsonedit({
-      jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){
+    output$Schema <- listviewer::renderJsonedit({
+      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){
         jsonList <- '{"sample":"test"}'
       }
       else{
@@ -284,21 +276,21 @@ runApp(shinyApp(
                 Shiny.onInputChange('jsedOutput',txt)}")
       )
     })
-    
+
     # output$SchemaText <- renderText(input$jsedOutput)
-    
+
     observeEvent(input$UpdateSchema,{
       validateJSON <<- input$jsedOutput
     })
-    
+
     output$DownloadSchema <- downloadHandler(
       filename = function(){paste0('DownloadSchema', ".json")}
       , content = function(file){write(jsonlite::toJSON(validateJSON), file)}
     )
-    
+
     #JSON Structure
-    output$Template <- renderJsonedit({
-      jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadTemplate$datapath)){
+    output$Template <- listviewer::renderJsonedit({
+      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadTemplate$datapath)){
         jsonList <- '{"sample":"test"}'
       }
       else{
@@ -311,20 +303,20 @@ runApp(shinyApp(
                 Shiny.onInputChange('jsedOutput2',txt)}")
       )
     })
-    
+
     output$TemplateText <- renderText(input$jsedOutput2)
-    
+
     observeEvent(input$UpdateTemplate,{
-      
+
       validationJson2 <<- input$jsedOutput2
-      
+
     })
-    
+
     output$DownloadTemplate <- downloadHandler(
       filename = function(){paste0('DownloadTemplate', ".json")}
       , content = function(file){write(jsonlite::toJSON(validationJson2), file)}
     )
-    
+
     # JSON Annotation
     output$annot <- listviewer::renderJsonedit({
       listviewer::jsonedit(JSONannotation <<- validationJson2
@@ -332,14 +324,14 @@ runApp(shinyApp(
                                                          console.log(txt)
                                                          Shiny.onInputChange('saveJson',txt)}"))
     })
-    
+
     output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
-    
+
     errorReportSetting <- eventReactive(input$button,{
       if(is.null(input$saveJson)){
         v <<- jsonvalidate::json_validator(validationJson)
         errorInfo <<- v(JSONannotation, verbose=TRUE, greedy=TRUE)
-        
+
         if(errorInfo[1] ==TRUE)
           errorInfo[1] = 'Validate!'
         else{
@@ -361,17 +353,17 @@ runApp(shinyApp(
           df <- attr(errorInfo,'error')
           errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
         }
-        
+
       }
-      
+
       errorInfo
-      
+
     })
-    
+
     output$errorReport <- renderText({
       as.character(errorReportSetting())
     })
-    
+
     # Elasticsearch
     observeEvent(input$Send, {
       if(exists(input$host|input$port)==T){
@@ -379,7 +371,7 @@ runApp(shinyApp(
       } else{
         esConnection <- elastic::connect(errors='complete')
       }
-      jsonToES(connection, jsonFolder = json_path, dropIfExist = T)
+      jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
     })
   })
-))
+)
