@@ -1,5 +1,4 @@
 Package: SOCRATex
-
 Title: Staged Optimization of Curation, Regularization, and Annotation of clinical Text
 Version: 0.0.0.9000
 Authors@R: c(
