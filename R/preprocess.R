@@ -17,7 +17,7 @@
 
 preprocess <- function(text, english = F, whitespace = F, stopwords = F, number = F, punc = F, stem = F, lower = F){
 
-  if(english == T){Text_corpus <- gsub('[^[:ascii:]]', '', Text_corpus)}
+  if(english == T){Text_corpus <- gsub('[^[:ascii:]]', '', Text_corpus, perl = T)}
   Text_corpus <- tm::VCorpus(tm::VectorSource(Text_corpus))
   if(whitespace == T){Text_corpus <- tm::tm_map(Text_corpus, stripWhitespace)}
   if(stopwords == T){Text_corpus <- tm::tm_map(Text_corpus, removeWords, stopwords('en'))}
