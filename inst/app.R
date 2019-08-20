@@ -263,29 +263,23 @@ shinyApp(
 
     #JSON Schema
     output$Schema <- listviewer::renderJsonedit({
-      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){
-        jsonList <- '{"sample":"test"}'
-      }
-      else{
-        jsonList <- input$UploadSchema$datapath
-      }
+      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){jsonList <- '{"sample":"test"}'}
+                                                          else{jsonList <- input$UploadSchema$datapath}
       )
       ,"onChange" = htmlwidgets::JS("() => {
-                var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Schema'})[0].editor.getText()
-                console.log(txt)
-                Shiny.onInputChange('jsedOutput',txt)}")
+                                    var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Schema'})[0].editor.getText()
+                                    console.log(txt)
+                                    Shiny.onInputChange('jsedOutput',txt)}")
       )
-    })
-
-    # output$SchemaText <- renderText(input$jsedOutput)
+  })
 
     observeEvent(input$UpdateSchema,{
-      validateJSON <<- input$jsedOutput
+      validationJson <<- input$jsedOutput
     })
 
     output$DownloadSchema <- downloadHandler(
       filename = function(){paste0('DownloadSchema', ".json")}
-      , content = function(file){write(jsonlite::toJSON(validateJSON), file)}
+      , content = function(file){write(jsonlite::toJSON(validationJson), file)}
     )
 
     #JSON Structure
@@ -298,18 +292,16 @@ shinyApp(
       }
       )
       ,"onChange" = htmlwidgets::JS("() => {
-                var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Template'})[0].editor.getText()
-                console.log(txt)
-                Shiny.onInputChange('jsedOutput2',txt)}")
+                                    var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Template'})[0].editor.getText()
+                                    console.log(txt)
+                                    Shiny.onInputChange('jsedOutput2',txt)}")
       )
-    })
+  })
 
     output$TemplateText <- renderText(input$jsedOutput2)
 
     observeEvent(input$UpdateTemplate,{
-
       validationJson2 <<- input$jsedOutput2
-
     })
 
     output$DownloadTemplate <- downloadHandler(
@@ -345,19 +337,13 @@ shinyApp(
         errorInfo <<- v(input$saveJson, verbose=TRUE, greedy=TRUE)
         if(errorInfo[1] == TRUE){
           errorInfo[1] = 'Validate!'
-          # save
-          # jsonFile <- jsonFile[as.numeric(input$num),'json']
-          # write.xlsx(jsonFile,"./Clustering/json_sample100.xlsx", sheetName = "Sheet1", stringsAsFactors=F)
         }
         else{
           df <- attr(errorInfo,'error')
           errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
         }
-
       }
-
       errorInfo
-
     })
 
     output$errorReport <- renderText({
