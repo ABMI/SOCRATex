@@ -77,16 +77,16 @@ shinyApp(
                                                                     , verbatimTextOutput('TemplateText')
                                                         )
                                             ))
-                                 , tabPanel("JSON Annotation"
-                                            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                                                        actionButton("click", "Click")
-                                            )),
-                                            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                                                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
-                                                     )))
-                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                                            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                                            ))
+                                 # , tabPanel("JSON Annotation"
+                                 #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                                 #                                        actionButton("click", "Click")
+                                 #            )),
+                                 #            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                 #                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
+                                 #                     )))
+                                 #            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                 #            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                                 #            ))
                     )
                     # , navbarMenu("Elasticsearch"
                     #              , fluidRow(column(12
@@ -152,7 +152,7 @@ shinyApp(
         } else{Text_corpus <<- Text$NOTE_TEXT}
 
         dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                                , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+                           , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
         rownames(dtm) <<- Text$NOTE_ID
       } else{
         sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
@@ -171,7 +171,7 @@ shinyApp(
         } else{Text_corpus <<- Text$NOTE_TEXT}
 
         dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                                , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+                           , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
         rownames(dtm) <<- Text$NOTE_ID
       }
 
@@ -271,7 +271,9 @@ shinyApp(
                                     console.log(txt)
                                     Shiny.onInputChange('jsedOutput',txt)}")
       )
-  })
+    })
+
+    output$SchemaText <- renderText(input$jsedOutput)
 
     observeEvent(input$UpdateSchema,{
       validationJson <<- input$jsedOutput
@@ -281,6 +283,7 @@ shinyApp(
       filename = function(){paste0('DownloadSchema', ".json")}
       , content = function(file){write(jsonlite::toJSON(validationJson), file)}
     )
+
 
     #JSON Structure
     output$Template <- listviewer::renderJsonedit({
@@ -296,7 +299,7 @@ shinyApp(
                                     console.log(txt)
                                     Shiny.onInputChange('jsedOutput2',txt)}")
       )
-  })
+    })
 
     output$TemplateText <- renderText(input$jsedOutput2)
 
@@ -310,45 +313,45 @@ shinyApp(
     )
 
     # JSON Annotation
-    output$annot <- listviewer::renderJsonedit({
-      listviewer::jsonedit(JSONannotation <<- validationJson2
-                           ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'annot'})[0].editor.getText()
-                                                         console.log(txt)
-                                                         Shiny.onInputChange('saveJson',txt)}"))
-    })
-
-    output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
-
-    errorReportSetting <- eventReactive(input$button,{
-      if(is.null(input$saveJson)){
-        v <<- jsonvalidate::json_validator(validationJson)
-        errorInfo <<- v(JSONannotation, verbose=TRUE, greedy=TRUE)
-
-        if(errorInfo[1] ==TRUE)
-          errorInfo[1] = 'Validate!'
-        else{
-          df <- attr(errorInfo,'error')
-          errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
-        }
-      }
-      else{
-        JSON[as.numeric(input$num)] <<- input$saveJson
-        v <<- jsonvalidate::json_validator(validationJson)
-        errorInfo <<- v(input$saveJson, verbose=TRUE, greedy=TRUE)
-        if(errorInfo[1] == TRUE){
-          errorInfo[1] = 'Validate!'
-        }
-        else{
-          df <- attr(errorInfo,'error')
-          errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
-        }
-      }
-      errorInfo
-    })
-
-    output$errorReport <- renderText({
-      as.character(errorReportSetting())
-    })
+    # output$annot <- listviewer::renderJsonedit({
+    #   listviewer::jsonedit(JSONannotation <<- validationJson2
+    #                        ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'annot'})[0].editor.getText()
+    #                                                      console.log(txt)
+    #                                                      Shiny.onInputChange('saveJson',txt)}"))
+    # })
+    #
+    # output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
+    #
+    # errorReportSetting <- eventReactive(input$button,{
+    #   if(is.null(input$saveJson)){
+    #     v <<- jsonvalidate::json_validator(validationJson)
+    #     errorInfo <<- v(JSONannotation, verbose=TRUE, greedy=TRUE)
+    #
+    #     if(errorInfo[1] ==TRUE)
+    #       errorInfo[1] = 'Validate!'
+    #     else{
+    #       df <- attr(errorInfo,'error')
+    #       errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
+    #     }
+    #   }
+    #   else{
+    #     JSON[as.numeric(input$num)] <<- input$saveJson
+    #     v <<- jsonvalidate::json_validator(validationJson)
+    #     errorInfo <<- v(input$saveJson, verbose=TRUE, greedy=TRUE)
+    #     if(errorInfo[1] == TRUE){
+    #       errorInfo[1] = 'Validate!'
+    #     }
+    #     else{
+    #       df <- attr(errorInfo,'error')
+    #       errorInfo <- paste(errorInfo[1],paste(df[,1],df[,2],collapse ='\n'),collapse ='\n')
+    #     }
+    #   }
+    #   errorInfo
+    # })
+    #
+    # output$errorReport <- renderText({
+    #   as.character(errorReportSetting())
+    # })
 
     # Elasticsearch
     # observeEvent(input$Send, {
