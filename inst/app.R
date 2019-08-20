@@ -88,16 +88,16 @@ shinyApp(
                                             , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                             ))
                     )
-                    , navbarMenu("Elasticsearch"
-                                 , fluidRow(column(12
-                                                   , align='center'
-                                                   , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
-                                                   #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
-                                                   , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
-                                                   , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
-                                                   , actionButton('send', 'Send'))
-                                 )
-                    )
+                    # , navbarMenu("Elasticsearch"
+                    #              , fluidRow(column(12
+                    #                                , align='center'
+                    #                                , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
+                    #                                #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                    #                                , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
+                    #                                , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
+                    #                                , actionButton('send', 'Send'))
+                    #              )
+                    # )
   ))
 
   , server <- (function(input, output){
@@ -137,7 +137,7 @@ shinyApp(
       if(exists("input$resultdb")==T){
         sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                              and person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
+                              and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                               and note_type_concept_id in (@note_type)
                               and a.person_id=b.person_id
                             order by newid()"
@@ -365,13 +365,13 @@ shinyApp(
     })
 
     # Elasticsearch
-    observeEvent(input$Send, {
-      if(exists(input$host|input$port)==T){
-        esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
-      } else{
-        esConnection <- elastic::connect(errors='complete')
-      }
-      jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
-    })
+    # observeEvent(input$Send, {
+    #   if(exists(input$host|input$port)==T){
+    #     esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
+    #   } else{
+    #     esConnection <- elastic::connect(errors='complete')
+    #   }
+    #   jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
+    # })
   })
 )
