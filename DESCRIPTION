@@ -4,7 +4,8 @@ Version: 0.0.0.9000
 Authors@R: c(
       person("Jimyung", "Park", role=c("aut", "cre"), email = "cory66421@gmail.com"),
       person("Seng Chan", "You", role="aut", email = "applegna@gmail.com"),
-      person("Dongsu", "Park", role="ctb", email = "dongsu2005@naver.com")
+      person("Dongsu", "Park", role="ctb", email = "dongsu2005@naver.com"),
+      person("Jun Hyeong", "Kim", role="ctb", email = "imblock@ajou.ac.kr")
       )
 Description: SOCRATex is an open source NLP system based on OMOP CDM. 
 Depends: 
