@@ -151,11 +151,18 @@ shinyApp(
     # picker
     output$typeOutput <- renderUI({
       if(input$type == T){
+        if(exists("connection")==TRUE){
         sql <- "select distinct note_type_concept_id from NOTE"
         typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1])
         shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
                                   ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
                                   ,multiple=T)
+        } else{
+          typeResult <- as.character(distinct(Text, NOTE_TYPE_CONCEPT_ID)[,1])
+          shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
+                                    ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                    ,multiple=T)
+        }
       }
     })
 
@@ -163,16 +170,13 @@ shinyApp(
     output$contents <- renderTable({
       req(input$file1)
 
-      tryCatch(
-        {
+      tryCatch({
           Text <<- read.csv(input$file1$datapath,
                             header = input$header,
                             sep = input$sep,
                             quote = input$quote)
-        },
-        error = function(e) {
-          stop(safeError(e))
-        }
+          colnames(Text) <<- toupper(colnames(Text))
+          },error = function(e) {stop(safeError(e))}
       )
 
       if(input$disp == "head") {
@@ -197,6 +201,7 @@ shinyApp(
           sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
 
           Text <<- DatabaseConnector::querySql(connection, sql)
+          colnames(Text) <<- toupper(colnames(Text))
           JSON <<- c()
 
           if(exists("input$dictionary_table")==T){
@@ -227,8 +232,11 @@ shinyApp(
                              , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
           rownames(dtm) <<- Text$NOTE_ID
         }} else{
-          Text_corpus <<- Text$NOTE_TEXT
           JSON <<- c()
+          Text <- Text %>% filter(NOTE_TYPE_CONCEPT_ID %in% input$note_type)
+          Text <- Text %>% filter(substring(NOTE_DATE, 1, 4) >= input$date[1] & substring(NOTE_DATE, 1, 4) <= input$date[2])
+          Text <<- head(Text, input$num)
+          Text_corpus <<- Text$NOTE_TEXT
 
           dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
                              , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
