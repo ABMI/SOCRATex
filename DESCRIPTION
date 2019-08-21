@@ -34,7 +34,8 @@ Imports:
   LDAvis,
   DT
 Suggests:
-  xlsx
+  ldatuning
+  utils
 License: Apache License Version 2.0
 Encoding: UTF-8
 LazyData: true

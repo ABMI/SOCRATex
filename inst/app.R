@@ -67,6 +67,13 @@ shinyApp(
                                                        , column(6, plotly::plotlyOutput("date"))
                                             )
                                  )
+                                 , tabPanel("Optimal Topics"
+                                            , sidebarPanel(
+                                              helpText("This is for calculateing optimal number of topics for Latent Dirichlet Allocation. The methods are following ....")
+                                              , actionButton("OptimalTopic", "Calculate!")
+                                              )
+                                            , mainPanel(plotOutput("Tuning"))
+                                 )
                                  , tabPanel("Latent Dirichlet Allocation"
                                             , tabsetPanel(tabPanel("LDA Visualization"
                                                                    , fluidPage(
@@ -292,6 +299,8 @@ shinyApp(
       plotly::ggplotly(ggplot(date, aes(x=NoteDate, y=Count, fill=NoteType)) + geom_bar(stat = "identity", position = "stack") +
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
+
+    TopicNumber <- eventReactive(input$OptimalToipc, {})
 
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{
