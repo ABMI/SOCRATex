@@ -22,7 +22,6 @@ shinyApp(
                                                         accept = c("text/csv",
                                                                    "text/comma-separated-values,text/plain",
                                                                    ".csv")),
-                                              tags$hr(),
                                               checkboxInput("header", "Header", TRUE),
                                               radioButtons("sep", "Separator",
                                                            choices = c(Comma = ",",
@@ -34,7 +33,6 @@ shinyApp(
                                                                        "Double Quote" = '"',
                                                                        "Single Quote" = "'"),
                                                            selected = '"'),
-                                              tags$hr(),
                                               radioButtons("disp", "Display",
                                                            choices = c(Head = "head",
                                                                        All = "all"),
@@ -106,16 +104,16 @@ shinyApp(
                                                                     , verbatimTextOutput('TemplateText')
                                                         )
                                             ))
-                                 , tabPanel("JSON Annotation"
-                                            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                                                        actionButton("click", "Click")
-                                            )),
-                                            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                                                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
-                                                     )))
-                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                                            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                                            ))
+                                 # , tabPanel("JSON Annotation"
+                                 #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                                 #                                        actionButton("click", "Click")
+                                 #            )),
+                                 #            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                 #                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
+                                 #                     )))
+                                 #            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                 #            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                                 #            ))
                     )
                     , tabPanel("Elasticsearch"
                                , fluidRow(column(12
@@ -161,11 +159,12 @@ shinyApp(
       }
     })
 
-    # Data extraction using file input
+    # Data extraction using file upload
     output$contents <- renderTable({
-      req(input$csv)
+      req(input$file1)
 
-      tryCatch({
+      tryCatch(
+        {
           Text <<- read.csv(input$file1$datapath,
                             header = input$header,
                             sep = input$sep,
@@ -177,12 +176,13 @@ shinyApp(
       )
 
       if(input$disp == "head") {
-        return(head(df))
+        return(head(Text))
       }
       else {
-        return(df)
+        return(Text)
       }
     })
+
 
     # preprocessing
     observeEvent(input$process,{
@@ -227,8 +227,6 @@ shinyApp(
                              , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
           rownames(dtm) <<- Text$NOTE_ID
         }} else{
-          Text
-
           Text_corpus <<- Text$NOTE_TEXT
           JSON <<- c()
 
