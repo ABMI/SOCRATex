@@ -46,7 +46,7 @@ shinyApp(
                     , tabPanel("Preprocessing"
                                , sidebarPanel(shinyWidgets::switchInput("type", "Type", value=F)
                                               , uiOutput("typeOutput")
-                                              , sliderInput("num", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
+                                              , sliderInput("ReportNum", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
                                               , sliderInput("date", "Dates", min = 1990, max = 2019, value = c(2012, 2018), step = 1)
                                               , prettyCheckbox('english', "English only", T, icon=icon("check"), plain=T)
                                               , prettyCheckbox('whitespace', "Remove whitespace", F, icon=icon("check"), plain=T)
@@ -79,6 +79,19 @@ shinyApp(
                                               , helpText("This is for calculateing optimal number of topics for Latent Dirichlet Allocation. The methods are following ....")
                                             )
                                             , mainPanel(plotOutput("Tuning"))
+                                 )
+                                 , tabPanel("LDAtuning"
+                                            , fluidRow(
+                                              sidebarPanel(
+                                                sliderInput("TopicNum", "Number of reports", min = 1, max = 300, value = c(5,30), step = 1)
+                                                , numericInput("By", "Toipcs, by:", min = 1, max = 30, step = 1, value = 1)
+                                                , shinyWidgets::pickerInput("s", label="Evulation Methods", choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
+                                                                            , options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                                                            , multiple=T)
+                                                , actionButton("Calc", "Calculate!")
+                                              ),
+                                              mainPanel(plotOutput("TuningGraph"))
+                                            )
                                  )
                                  , tabPanel("Latent Dirichlet Allocation"
                                             , tabsetPanel(tabPanel("LDA Visualization"
@@ -211,7 +224,7 @@ shinyApp(
                               and note_type_concept_id in (@note_type)
                               and a.person_id=b.person_id
                             order by newid()"
-          sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+          sql <- SqlRender::render(sql, num = input$ReportNum, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
 
           Text <<- DatabaseConnector::querySql(connection, sql)
           colnames(Text) <<- toupper(colnames(Text))
@@ -231,7 +244,7 @@ shinyApp(
                               and note_type_concept_id in (@note_type)
                               and a.person_id=b.person_id
                             order by newid()"
-          sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+          sql <- SqlRender::render(sql, num = input$ReportNum, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
 
           Text <<- DatabaseConnector::querySql(connection, sql)
           JSON <<- c()
@@ -248,8 +261,8 @@ shinyApp(
           JSON <<- c()
           Text <- Text %>% filter(NOTE_TYPE_CONCEPT_ID %in% input$note_type)
           Text <- Text %>% filter(substring(NOTE_DATE, 1, 4) >= input$date[1] & substring(NOTE_DATE, 1, 4) <= input$date[2])
-          Text <<- head(Text, input$num)
-          Text_corpus <<- Text$NOTE_TEXT
+          Text <<- head(Text, input$ReportNum)
+          Text_corpus <<- Text$NOTE_TEXT ## Why it's not working...?
 
           dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
                              , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
@@ -306,13 +319,12 @@ shinyApp(
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
 
-    # LDA Tuning
-    TopicNumber <- eventReactive(input$OptimalToipc, {
-      LDATuning <- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$topics[1], to = input$topics[2], by = input$by), metrics = input$metrics)
-      LDATuning
+    LDATuning <- eventReactive(input$Calc, {
+      tuning <- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
+      ldatuning::FindTopicsNumber_plot(tuning)
     })
 
-    output$Tuning <- renderPlot({TopicNumber()})
+    output$TuningGraph <- renderPlot({LDATuning()})
 
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{

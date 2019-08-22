@@ -20,7 +20,7 @@ Depends:
   rJava,
   dplyr
 Imports:
-  ldatuning
+  ldatuning,
   DatabaseConnector,
   SqlRender,
   NLP,
