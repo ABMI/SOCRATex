@@ -20,6 +20,7 @@ Depends:
   rJava,
   dplyr
 Imports:
+  ldatuning
   DatabaseConnector,
   SqlRender,
   NLP,
@@ -34,7 +35,6 @@ Imports:
   LDAvis,
   DT
 Suggests:
-  ldatuning
   utils
 License: Apache License Version 2.0
 Encoding: UTF-8

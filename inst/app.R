@@ -1,5 +1,5 @@
 shinyApp(
-  ui <- (navbarPage(theme = shinythemes::shinytheme("spacelab")
+  ui <- (navbarPage(theme = shinythemes::shinytheme("flatly")
                     , "SOCRATex"
                     , navbarMenu("Data Extraction"
                                  , tabPanel("DB Connection"
@@ -69,9 +69,15 @@ shinyApp(
                                  )
                                  , tabPanel("Optimal Topics"
                                             , sidebarPanel(
-                                              helpText("This is for calculateing optimal number of topics for Latent Dirichlet Allocation. The methods are following ....")
+                                              sliderInput("topcis", "Topics", min = 0, max = 300, value = c(5, 30), step = 1)
+                                              , numericInput("by", "Topics, by", 1, min = 1, max = 30)
+                                              , shinyWidgets::pickerInput("metric", "Metrics for tuning"
+                                                                          , options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                                                          , choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
+                                                                          , multiple = T)
                                               , actionButton("OptimalTopic", "Calculate!")
-                                              )
+                                              , helpText("This is for calculateing optimal number of topics for Latent Dirichlet Allocation. The methods are following ....")
+                                            )
                                             , mainPanel(plotOutput("Tuning"))
                                  )
                                  , tabPanel("Latent Dirichlet Allocation"
@@ -159,11 +165,11 @@ shinyApp(
     output$typeOutput <- renderUI({
       if(input$type == T){
         if(exists("connection")==TRUE){
-        sql <- "select distinct note_type_concept_id from NOTE"
-        typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1])
-        shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
-                                  ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
-                                  ,multiple=T)
+          sql <- "select distinct note_type_concept_id from NOTE"
+          typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1])
+          shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
+                                    ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                    ,multiple=T)
         } else{
           typeResult <- as.character(distinct(Text, NOTE_TYPE_CONCEPT_ID)[,1])
           shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
@@ -178,12 +184,12 @@ shinyApp(
       req(input$file1)
 
       tryCatch({
-          Text <<- read.csv(input$file1$datapath,
-                            header = input$header,
-                            sep = input$sep,
-                            quote = input$quote)
-          colnames(Text) <<- toupper(colnames(Text))
-          },error = function(e) {stop(safeError(e))}
+        Text <<- read.csv(input$file1$datapath,
+                          header = input$header,
+                          sep = input$sep,
+                          quote = input$quote)
+        colnames(Text) <<- toupper(colnames(Text))
+      },error = function(e) {stop(safeError(e))}
       )
 
       if(input$disp == "head") {
@@ -300,7 +306,13 @@ shinyApp(
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
 
-    TopicNumber <- eventReactive(input$OptimalToipc, {})
+    # LDA Tuning
+    TopicNumber <- eventReactive(input$OptimalToipc, {
+      LDATuning <- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$topics[1], to = input$topics[2], by = input$by), metrics = input$metrics)
+      LDATuning
+    })
+
+    output$Tuning <- renderPlot({TopicNumber()})
 
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{
@@ -441,4 +453,3 @@ shinyApp(
     })
   })
 )
-
