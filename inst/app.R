@@ -72,7 +72,7 @@ shinyApp(
                                               sidebarPanel(
                                                 sliderInput("TopicNum", "Number of reports", min = 1, max = 300, value = c(5,30), step = 1)
                                                 , numericInput("By", "Toipcs, by:", min = 1, max = 30, step = 1, value = 1)
-                                                , shinyWidgets::pickerInput("s", label="Evulation Methods", choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
+                                                , shinyWidgets::pickerInput("metrics", label="Evulation Methods", choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
                                                                             , options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
                                                                             , multiple=T)
                                                 , actionButton("Calc", "Calculate!")
@@ -117,16 +117,16 @@ shinyApp(
                                                                     , verbatimTextOutput('TemplateText')
                                                         )
                                             ))
-                                 # , tabPanel("JSON Annotation"
-                                 #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                 #                                        actionButton("click", "Click")
-                                 #            )),
-                                 #            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                                 #                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
-                                 #                     )))
-                                 #            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                                 #            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                                 #            ))
+                                 , tabPanel("JSON Annotation"
+                                            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                                                                        actionButton("click", "Click")
+                                            )),
+                                            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
+                                                     )))
+                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                                            ))
                     )
                     , tabPanel("Elasticsearch"
                                , fluidRow(column(12

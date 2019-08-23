@@ -4,8 +4,8 @@
 \alias{preprocess}
 \title{Preprocess function}
 \usage{
-preprocess(text, english = F, whitespace = F, stopwords = F, number = F,
-  punc = F, stem = F, lower = F)
+preprocess(text, english = F, whitespace = F, stopwords = F,
+  number = F, punc = F, stem = F, lower = F)
 }
 \arguments{
 \item{text}{text corpus want to analyze.}
