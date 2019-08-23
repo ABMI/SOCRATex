@@ -117,16 +117,16 @@ shinyApp(
                                                                     , verbatimTextOutput('TemplateText')
                                                         )
                                             ))
-                                 # , tabPanel("JSON Annotation"
-                                 #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                 #                                        actionButton("click", "Click")
-                                 #            )),
-                                 #            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                                 #                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
-                                 #                     )))
-                                 #            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                                 #            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                                 #            ))
+                                 , tabPanel("JSON Annotation"
+                                            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                                                                        actionButton("click", "Click")
+                                            )),
+                                            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
+                                                     )))
+                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                                            ))
                     )
                     , tabPanel("Elasticsearch"
                                , fluidRow(column(12
