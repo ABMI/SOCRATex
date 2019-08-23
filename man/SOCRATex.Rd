@@ -2,7 +2,7 @@
 % Please edit documentation in R/SOCRATex.R
 \name{SOCRATex}
 \alias{SOCRATex}
-\title{SOCRATex functiogithun}
+\title{SOCRATex function}
 \usage{
 SOCRATex()
 }

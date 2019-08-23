@@ -1,7 +1,7 @@
 shinyApp(
-  ui <- (navbarPage(theme = shinythemes::shinytheme("spacelab")
+  ui <- (navbarPage(theme = shinythemes::shinytheme("flatly")
                     , "SOCRATex"
-                    , navbarMenu("Extraction"
+                    , navbarMenu("Data Extraction"
                                  , tabPanel("DB Connection"
                                             , fluidRow(column(12
                                                               , align='center'
@@ -15,22 +15,49 @@ shinyApp(
                                                               , actionButton('connect', 'Connect'))
                                             )
                                  )
-                                 , tabPanel("Preprocessing"
-                                            , sidebarPanel(shinyWidgets::switchInput("type", "Type", value=F)
-                                                           , uiOutput("typeOutput")
-                                                           , sliderInput("num", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
-                                                           , sliderInput("date", "Dates", min = 1990, max = 2019, value = c(2012, 2018), step = 1)
-                                                           , prettyCheckbox('english', "English only", T, icon=icon("check"), plain=T)
-                                                           , prettyCheckbox('whitespace', "Remove whitespace", F, icon=icon("check"), plain=T)
-                                                           , prettyCheckbox('stopwords', "Remove stopword", F, icon=icon("check"), plain=T)
-                                                           , prettyCheckbox('number', "Remove number", F, icon=icon("check"), plain=T)
-                                                           , prettyCheckbox('punc', "Remove punctuation", F, icon=icon("check"), plain=T)
-                                                           , prettyCheckbox('stem', "Stemming", F, icon=icon("check"), plain=T)
-                                                           , prettyCheckbox('lower', "To lower", F, icon=icon("check"), plain=T)
-                                                           , textInput('dictionary_table', 'Dictionary table', '',  placeholder = 'ex) DBName.dbo.tableName')
-                                                           , actionButton('process', 'Pre-Process')
-                                                           , width="2"))
+                                 , tabPanel("File Upload"
+                                            , sidebarPanel(
+                                              fileInput("file1", "Choose CSV File",
+                                                        multiple = FALSE,
+                                                        accept = c("text/csv",
+                                                                   "text/comma-separated-values,text/plain",
+                                                                   ".csv")),
+                                              checkboxInput("header", "Header", TRUE),
+                                              radioButtons("sep", "Separator",
+                                                           choices = c(Comma = ",",
+                                                                       Semicolon = ";",
+                                                                       Tab = "\t"),
+                                                           selected = ","),
+                                              radioButtons("quote", "Quote",
+                                                           choices = c(None = "",
+                                                                       "Double Quote" = '"',
+                                                                       "Single Quote" = "'"),
+                                                           selected = '"'),
+                                              radioButtons("disp", "Display",
+                                                           choices = c(Head = "head",
+                                                                       All = "all"),
+                                                           selected = "head")
+                                            ),
+                                            mainPanel(
+                                              tableOutput("contents")
+                                            )
+                                 )
                     )
+                    , tabPanel("Preprocessing"
+                               , sidebarPanel(shinyWidgets::switchInput("type", "Type", value=F)
+                                              , uiOutput("typeOutput")
+                                              , sliderInput("ReportNum", "Number of reports", min = 10, max = 3000, value = 500, step = 1)
+                                              , sliderInput("date", "Dates", min = 1990, max = 2019, value = c(2012, 2018), step = 1)
+                                              , prettyCheckbox('english', "English only", T, icon=icon("check"), plain=T)
+                                              , prettyCheckbox('whitespace', "Remove whitespace", F, icon=icon("check"), plain=T)
+                                              , prettyCheckbox('stopwords', "Remove stopword", F, icon=icon("check"), plain=T)
+                                              , prettyCheckbox('number', "Remove number", F, icon=icon("check"), plain=T)
+                                              , prettyCheckbox('punc', "Remove punctuation", F, icon=icon("check"), plain=T)
+                                              , prettyCheckbox('stem', "Stemming", F, icon=icon("check"), plain=T)
+                                              , prettyCheckbox('lower', "To lower", F, icon=icon("check"), plain=T)
+                                              , textInput('dictionary_table', 'Dictionary table', '',  placeholder = 'ex) DBName.dbo.tableName')
+                                              , actionButton('process', 'Pre-Process')
+                                              , width="3"))
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
                                             , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
@@ -38,6 +65,19 @@ shinyApp(
                                             )
                                             , fluidRow(column(6,plotly::plotlyOutput("pie"))
                                                        , column(6, plotly::plotlyOutput("date"))
+                                            )
+                                 )
+                                 , tabPanel("LDAtuning"
+                                            , fluidRow(
+                                              sidebarPanel(
+                                                sliderInput("TopicNum", "Number of reports", min = 1, max = 300, value = c(5,30), step = 1)
+                                                , numericInput("By", "Toipcs, by:", min = 1, max = 30, step = 1, value = 1)
+                                                , shinyWidgets::pickerInput("s", label="Evulation Methods", choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
+                                                                            , options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                                                            , multiple=T)
+                                                , actionButton("Calc", "Calculate!")
+                                              ),
+                                              mainPanel(plotOutput("TuningGraph"))
                                             )
                                  )
                                  , tabPanel("Latent Dirichlet Allocation"
@@ -57,7 +97,7 @@ shinyApp(
                                             ))
                     )
                     , navbarMenu("Annotation"
-                                 , tabPanel("JSON schema"
+                                 , tabPanel("JSON Schema"
                                             , fluidPage(sidebarPanel(width = 3
                                                                      , fileInput("UploadSchema", "Upload"
                                                                                  ,accept = c("text/rds","text/plain",".rds", ".json"))
@@ -77,27 +117,27 @@ shinyApp(
                                                                     , verbatimTextOutput('TemplateText')
                                                         )
                                             ))
-                                 , tabPanel("JSON Annotation"
-                                            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                                                        actionButton("click", "Click")
-                                            )),
-                                            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
-                                                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
-                                                     )))
-                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
-                                            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
-                                            ))
+                                 # , tabPanel("JSON Annotation"
+                                 #            , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
+                                 #                                        actionButton("click", "Click")
+                                 #            )),
+                                 #            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                 #                     column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
+                                 #                     )))
+                                 #            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                 #            , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
+                                 #            ))
                     )
-                    # , navbarMenu("Elasticsearch"
-                    #              , fluidRow(column(12
-                    #                                , align='center'
-                    #                                , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
-                    #                                #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
-                    #                                , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
-                    #                                , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
-                    #                                , actionButton('send', 'Send'))
-                    #              )
-                    # )
+                    , tabPanel("Elasticsearch"
+                               , fluidRow(column(12
+                                                 , align='center'
+                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
+                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                                                 , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
+                                                 , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
+                                                 , actionButton('send', 'Send'))
+                               )
+                    )
   ))
 
   , server <- (function(input, output){
@@ -114,7 +154,7 @@ shinyApp(
     observeEvent(input$connect,{
       DBcon <<- DBconnection()
 
-      if(DatabaseConnector::dbIsValid(connection)==TRUE){
+      if(exists("connection")==TRUE){
         showModal(modalDialog(
           title = "Messeage", "Database connection success!!", easyClose = T, footer=modalButton("cancel"), size = "l"
         ))
@@ -124,56 +164,97 @@ shinyApp(
     # picker
     output$typeOutput <- renderUI({
       if(input$type == T){
-        sql <- "select distinct note_type_concept_id from NOTE"
-        typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1])
-        shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
-                                  ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
-                                  ,multiple=T)
+        if(exists("connection")==TRUE){
+          sql <- "select distinct note_type_concept_id from NOTE"
+          typeResult <- as.character(DatabaseConnector::querySql(connection=connection, sql)[,1])
+          shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
+                                    ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                    ,multiple=T)
+        } else{
+          typeResult <- as.character(distinct(Text, NOTE_TYPE_CONCEPT_ID)[,1])
+          shinyWidgets::pickerInput("note_type", label="note_type", choices = typeResult
+                                    ,options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+                                    ,multiple=T)
+        }
       }
     })
 
+    # Data extraction using file upload
+    output$contents <- renderTable({
+      req(input$file1)
+
+      tryCatch({
+        Text <<- read.csv(input$file1$datapath,
+                          header = input$header,
+                          sep = input$sep,
+                          quote = input$quote)
+        colnames(Text) <<- toupper(colnames(Text))
+      },error = function(e) {stop(safeError(e))}
+      )
+
+      if(input$disp == "head") {
+        return(head(Text))
+      }
+      else {
+        return(Text)
+      }
+    })
+
+
     # preprocessing
     observeEvent(input$process,{
-      if(exists("input$resultdb")==T){
-        sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
+      if(exists("connection")==TRUE){
+        if(exists("input$resultdb")==T){
+          sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
                               and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
                               and note_type_concept_id in (@note_type)
                               and a.person_id=b.person_id
                             order by newid()"
-        sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+          sql <- SqlRender::render(sql, num = input$ReportNum, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
 
-        Text <<- DatabaseConnector::querySql(connection, sql)
-        JSON <<- c()
+          Text <<- DatabaseConnector::querySql(connection, sql)
+          colnames(Text) <<- toupper(colnames(Text))
+          JSON <<- c()
 
-        if(exists("input$dictionary_table")==T){
-          Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
-          Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
-        } else{Text_corpus <<- Text$NOTE_TEXT}
+          if(exists("input$dictionary_table")==T){
+            Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
+            Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
+          } else{Text_corpus <<- Text$NOTE_TEXT}
 
-        dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                                , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-        rownames(dtm) <<- Text$NOTE_ID
-      } else{
-        sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
+          dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+          rownames(dtm) <<- Text$NOTE_ID
+        } else{
+          sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
                             where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
                               and note_type_concept_id in (@note_type)
                               and a.person_id=b.person_id
                             order by newid()"
-        sql <- SqlRender::render(sql, num = input$num, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
+          sql <- SqlRender::render(sql, num = input$ReportNum, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
 
-        Text <<- DatabaseConnector::querySql(connection, sql)
-        JSON <<- c()
+          Text <<- DatabaseConnector::querySql(connection, sql)
+          JSON <<- c()
 
-        if(exists("input$dictionary_table")==T){
-          Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
-          Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
-        } else{Text_corpus <<- Text$NOTE_TEXT}
+          if(exists("input$dictionary_table")==T){
+            Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
+            Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
+          } else{Text_corpus <<- Text$NOTE_TEXT}
 
-        dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                                , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-        rownames(dtm) <<- Text$NOTE_ID
-      }
+          dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+          rownames(dtm) <<- Text$NOTE_ID
+        }} else{
+          JSON <<- c()
+          Text <- Text %>% filter(NOTE_TYPE_CONCEPT_ID %in% input$note_type)
+          Text <- Text %>% filter(substring(NOTE_DATE, 1, 4) >= input$date[1] & substring(NOTE_DATE, 1, 4) <= input$date[2])
+          Text <<- head(Text, input$ReportNum)
+          Text_corpus <<- Text$NOTE_TEXT ## Why it's not working...?
+
+          dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
+                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
+          rownames(dtm) <<- Text$NOTE_ID
+        }
 
       if(exists("dtm")==TRUE){
         showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
@@ -225,6 +306,13 @@ shinyApp(
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
 
+    LDATuning <- eventReactive(input$Calc, {
+      tuning <- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
+      ldatuning::FindTopicsNumber_plot(tuning)
+    })
+
+    output$TuningGraph <- renderPlot({LDATuning()})
+
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{
       fit <- topicmodels::LDA(dtm, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
@@ -271,7 +359,9 @@ shinyApp(
                                     console.log(txt)
                                     Shiny.onInputChange('jsedOutput',txt)}")
       )
-  })
+    })
+
+    output$SchemaText <- renderText(input$jsedOutput)
 
     observeEvent(input$UpdateSchema,{
       validationJson <<- input$jsedOutput
@@ -281,6 +371,7 @@ shinyApp(
       filename = function(){paste0('DownloadSchema', ".json")}
       , content = function(file){write(jsonlite::toJSON(validationJson), file)}
     )
+
 
     #JSON Structure
     output$Template <- listviewer::renderJsonedit({
@@ -296,7 +387,7 @@ shinyApp(
                                     console.log(txt)
                                     Shiny.onInputChange('jsedOutput2',txt)}")
       )
-  })
+    })
 
     output$TemplateText <- renderText(input$jsedOutput2)
 
@@ -351,14 +442,13 @@ shinyApp(
     })
 
     # Elasticsearch
-    # observeEvent(input$Send, {
-    #   if(exists(input$host|input$port)==T){
-    #     esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
-    #   } else{
-    #     esConnection <- elastic::connect(errors='complete')
-    #   }
-    #   jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
-    # })
+    observeEvent(input$Send, {
+      if(exists(input$host|input$port)==T){
+        esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
+      } else{
+        esConnection <- elastic::connect(errors='complete')
+      }
+      jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
+    })
   })
 )
-

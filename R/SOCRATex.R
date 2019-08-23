@@ -1,4 +1,4 @@
-#' SOCRATex functiogithun
+#' SOCRATex function
 #'
 #' This is a main function which can implement SOCRATex system and other functions in SOCRATex package.
 #'
@@ -12,6 +12,7 @@
 #' @import plotly
 #' @import DatabaseConnector
 #' @import rJava
+#' @import SqlRender
 #' @importFrom NLP ngrams
 #' @importFrom NLP words
 #' @importFrom stringi stri_count
@@ -34,7 +35,6 @@
 #' @importFrom LDAvis createJSON
 #' @importFrom LDAvis renderVis
 #' @importFrom LDAvis visOutput
-#' @importFrom SqlRender render
 #'
 #' @export
 
