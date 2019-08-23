@@ -72,7 +72,7 @@ shinyApp(
                                               sidebarPanel(
                                                 sliderInput("TopicNum", "Number of reports", min = 1, max = 300, value = c(5,30), step = 1)
                                                 , numericInput("By", "Toipcs, by:", min = 1, max = 30, step = 1, value = 1)
-                                                , shinyWidgets::pickerInput("s", label="Evulation Methods", choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
+                                                , shinyWidgets::pickerInput("metrics", label="Evulation Methods", choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
                                                                             , options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
                                                                             , multiple=T)
                                                 , actionButton("Calc", "Calculate!")
@@ -307,7 +307,11 @@ shinyApp(
     })
 
     LDATuning <- eventReactive(input$Calc, {
-      tuning <- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
+      TopicNum <<- input$TopicNum
+      By <<- input$By
+      metrics <<- input$metrics
+
+      tuning <<- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
       ldatuning::FindTopicsNumber_plot(tuning)
     })
 
