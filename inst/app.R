@@ -67,19 +67,6 @@ shinyApp(
                                                        , column(6, plotly::plotlyOutput("date"))
                                             )
                                  )
-                                 , tabPanel("Optimal Topics"
-                                            , sidebarPanel(
-                                              sliderInput("topcis", "Topics", min = 0, max = 300, value = c(5, 30), step = 1)
-                                              , numericInput("by", "Topics, by", 1, min = 1, max = 30)
-                                              , shinyWidgets::pickerInput("metric", "Metrics for tuning"
-                                                                          , options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
-                                                                          , choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
-                                                                          , multiple = T)
-                                              , actionButton("OptimalTopic", "Calculate!")
-                                              , helpText("This is for calculateing optimal number of topics for Latent Dirichlet Allocation. The methods are following ....")
-                                            )
-                                            , mainPanel(plotOutput("Tuning"))
-                                 )
                                  , tabPanel("LDAtuning"
                                             , fluidRow(
                                               sidebarPanel(
