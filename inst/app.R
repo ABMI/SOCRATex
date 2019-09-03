@@ -59,18 +59,19 @@ shinyApp(
                                               , actionButton('process', 'Pre-Process')
                                               , width="3")
                                , mainPanel(column(6, align='center', DT::dataTableOutput("count"))
-                                           , column(6, plotly::plotlyOutput("age"))
+                                           # , column(6, plotly::plotlyOutput("age"))
                                            , column(6,plotly::plotlyOutput("pie"))
                                            , column(6, plotly::plotlyOutput("date"))
+                               ))
                     , navbarMenu("Exploration"
-                                 , tabPanel("Characteristics"
-                                            , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
-                                                       , column(6, plotly::plotlyOutput("age"))
-                                            )
-                                            , fluidRow(column(6,plotly::plotlyOutput("pie"))
-                                                       , column(6, plotly::plotlyOutput("date"))
-                                            )
-                                 )
+                                 # , tabPanel("Characteristics"
+                                 #            , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
+                                 #                       , column(6, plotly::plotlyOutput("age"))
+                                 #            )
+                                 #            , fluidRow(column(6,plotly::plotlyOutput("pie"))
+                                 #                       , column(6, plotly::plotlyOutput("date"))
+                                 #            )
+                                 # )
                                  , tabPanel("LDAtuning"
                                             , fluidRow(
                                               sidebarPanel(
@@ -123,20 +124,22 @@ shinyApp(
                                             ))
                                  , tabPanel("JSON Annotation"
                                             , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                                                        actionButton("click", "Click")
-                                            )),
+                                                                        actionButton("click", "Click"))
+                                                                 , column(2, actionButton("save", "Save"))
+
+                                            ),
                                             fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
                                                      column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
                                                      )))
-                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                            , fluidRow(column(1, offset = 10, actionButton('button','Validate')))
                                             , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                             ))
                     )
                     , tabPanel("Elasticsearch"
                                , fluidRow(column(12
                                                  , align='center'
-                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
-                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                                                 , textInput('host', 'Host', '', placeholder = 'If you are using a localhost, leave it blank')
+                                                 # , textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
                                                  , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
                                                  , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
                                                  , actionButton('send', 'Send'))
@@ -414,6 +417,14 @@ shinyApp(
                            ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'annot'})[0].editor.getText()
                                                          console.log(txt)
                                                          Shiny.onInputChange('saveJson',txt)}"))
+    })
+
+    observeEvent(input$save, {
+      for(i in 1:nrow(JSON)){
+        write_json(JSON[i], tmp)
+        write(toJSON(read_json(tmp)), paste0("json",i,".json"))
+      }
+      write_json(JSON[50,], tmp)
     })
 
     output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
