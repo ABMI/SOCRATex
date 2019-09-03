@@ -420,11 +420,13 @@ shinyApp(
     })
 
     observeEvent(input$save, {
+      tmp <- tempfile()
+
       for(i in 1:nrow(JSON)){
         write_json(JSON[i], tmp)
         write(toJSON(read_json(tmp)), paste0("json",i,".json"))
       }
-      write_json(JSON[50,], tmp)
+      write_json(JSON, tmp)
     })
 
     output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
