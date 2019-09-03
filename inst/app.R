@@ -148,6 +148,16 @@ shinyApp(
                                                  , actionButton('send', 'Send'))
                                )
                     )
+                    , tabPanel("Elasticsearch"
+                               , fluidRow(column(12
+                                                 , align='center'
+                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
+                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                                                 , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
+                                                 , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
+                                                 , actionButton('send', 'Send'))
+                               )
+                    )
   ))
 
   , server <- (function(input, output){
