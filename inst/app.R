@@ -316,6 +316,7 @@ shinyApp(
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
 
+    # LDA tuning
     LDATuning <- eventReactive(input$Calc, {
       TopicNum <<- input$TopicNum
       By <<- input$By
