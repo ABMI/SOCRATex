@@ -138,6 +138,16 @@ shinyApp(
                                                  , actionButton('send', 'Send'))
                                )
                     )
+                    , tabPanel("Elasticsearch"
+                               , fluidRow(column(12
+                                                 , align='center'
+                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
+                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                                                 , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
+                                                 , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
+                                                 , actionButton('send', 'Send'))
+                               )
+                    )
   ))
 
   , server <- (function(input, output){
@@ -307,7 +317,11 @@ shinyApp(
     })
 
     LDATuning <- eventReactive(input$Calc, {
-      tuning <- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
+      TopicNum <<- input$TopicNum
+      By <<- input$By
+      metrics <<- input$metrics
+
+      tuning <<- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
       ldatuning::FindTopicsNumber_plot(tuning)
     })
 
