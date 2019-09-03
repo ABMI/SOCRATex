@@ -57,7 +57,11 @@ shinyApp(
                                               , prettyCheckbox('lower', "To lower", F, icon=icon("check"), plain=T)
                                               , textInput('dictionary_table', 'Dictionary table', '',  placeholder = 'ex) DBName.dbo.tableName')
                                               , actionButton('process', 'Pre-Process')
-                                              , width="3"))
+                                              , width="3")
+                               , mainPanel(column(6, align='center', DT::dataTableOutput("count"))
+                                           , column(6, plotly::plotlyOutput("age"))
+                                           , column(6,plotly::plotlyOutput("pie"))
+                                           , column(6, plotly::plotlyOutput("date"))
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
                                             , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
