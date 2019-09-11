@@ -64,14 +64,14 @@ shinyApp(
                                            , column(6, plotly::plotlyOutput("date"))
                                ))
                     , navbarMenu("Exploration"
-                                 , tabPanel("Characteristics"
-                                            , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
-                                                       , column(6, plotly::plotlyOutput("age"))
-                                            )
-                                            , fluidRow(column(6,plotly::plotlyOutput("pie"))
-                                                       , column(6, plotly::plotlyOutput("date"))
-                                            )
-                                 )
+                                 # , tabPanel("Characteristics"
+                                 #            , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
+                                 #                       , column(6, plotly::plotlyOutput("age"))
+                                 #            )
+                                 #            , fluidRow(column(6,plotly::plotlyOutput("pie"))
+                                 #                       , column(6, plotly::plotlyOutput("date"))
+                                 #            )
+                                 # )
                                  , tabPanel("LDAtuning"
                                             , fluidRow(
                                               sidebarPanel(
@@ -192,7 +192,8 @@ shinyApp(
         Text <<- read.csv(input$file1$datapath,
                           header = input$header,
                           sep = input$sep,
-                          quote = input$quote)
+                          quote = input$quote,
+                          stringsAsFactors = F)
         colnames(Text) <<- toupper(colnames(Text))
       },error = function(e) {stop(safeError(e))}
       )
@@ -311,6 +312,7 @@ shinyApp(
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
 
+    # LDA Tuning
     LDATuning <- eventReactive(input$Calc, {
       TopicNum <<- input$TopicNum
       By <<- input$By
@@ -350,6 +352,7 @@ shinyApp(
 
     output$LDAModel <- LDAvis::renderVis({VisSetting()})
 
+    # Sample documents from LDA results
     output$SampleTopic <- DT::renderDataTable({
       for(i in 1:input$topicNum){
         assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
@@ -417,8 +420,15 @@ shinyApp(
                                                          Shiny.onInputChange('saveJson',txt)}"))
     })
 
-    output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
+    # SourceText
+    SourceText <- eventReactive(input$click,{
+      num <<- input$num
+      Text$NOTE_TEXT[as.numeric(input$num)]
+    })
 
+    output$note <- renderText({SourceText()})
+
+    # Validation using JSON Schema
     errorReportSetting <- eventReactive(input$button,{
       if(is.null(input$saveJson)){
         v <<- jsonvalidate::json_validator(validationJson)
