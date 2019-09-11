@@ -326,38 +326,40 @@ shinyApp(
 
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{
-      fit <- topicmodels::LDA(dtm, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
-      phi <- modeltools::posterior(fit)$terms %>% as.matrix
-      theta <<- modeltools::posterior(fit)$topics %>% as.matrix
-      vocab <- colnames(phi)
-      doc_length <- c()
-
-      for(i in 1:length(Text_corpus)) {
-        temp <- paste(Text_corpus, collapse=" ")
-        doc_length <- c(doc_length, stringi::stri_count(temp, regex='\\S+'))
-      }
-
-      temp_frequency <- as.matrix(dtm)
-      freq_matrix <- data.frame(ST=colnames(temp_frequency),
-                                Freq=colSums(temp_frequency))
-      rm(temp_frequency)
-
-      json_lda <- LDAvis::createJSON(phi=phi,
-                                     theta=theta,
-                                     vocab=vocab,
-                                     doc.length=doc_length,
-                                     term.frequency=freq_matrix$Freq)
-      json_lda
+      # fit <- topicmodels::LDA(dtm, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
+      # phi <- modeltools::posterior(fit)$terms %>% as.matrix
+      # theta <<- modeltools::posterior(fit)$topics %>% as.matrix
+      # vocab <- colnames(phi)
+      # doc_length <- c()
+      #
+      # for(i in 1:length(Text_corpus)) {
+      #   temp <- paste(Text_corpus, collapse=" ")
+      #   doc_length <- c(doc_length, stringi::stri_count(temp, regex='\\S+'))
+      # }w
+      #
+      # temp_frequency <- as.matrix(dtm)
+      # freq_matrix <- data.frame(ST=colnames(temp_frequency),
+      #                           Freq=colSums(temp_frequency))
+      # rm(temp_frequency)
+      #
+      # json_lda <<- LDAvis::createJSON(phi=phi,
+      #                                theta=theta,
+      #                                vocab=vocab,
+      #                                doc.length=doc_length,
+      #                                term.frequency=freq_matrix$Freq)
+      # json_lda
+      TopicSample
     })
 
     output$LDAModel <- LDAvis::renderVis({VisSetting()})
 
     output$SampleTopic <- DT::renderDataTable({
-      for(i in 1:input$topicNum){
-        assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
-        assign(paste0("Sample",1), bind_rows(get(paste0("Sample",1)), get(paste0("Sample",i))))
-      }
-      return(unique(Sample1))
+      # for(i in 1:input$topicNum){
+      #   assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
+      #   assign(paste0("Sample",1), bind_rows(get(paste0("Sample",1)), get(paste0("Sample",i))))
+      # }
+      # return(unique(Sample1))
+      Sample1 <<- unique(Sample1)
     })
 
     #JSON Schema
@@ -420,16 +422,30 @@ shinyApp(
     })
 
     observeEvent(input$save, {
-      tmp <- tempfile()
-
-      for(i in 1:nrow(JSON)){
-        write_json(JSON[i], tmp)
-        write(toJSON(read_json(tmp)), paste0("json",i,".json"))
+      # tmp <- tempfile()
+      # for(i in 1:length(JSON)){
+      #   write_json(JSON[i], tmp)
+      #   write(toJSON(read_json(tmp)), paste0("json",i,".json"))
+      # }
+      # write_json(JSON, tmp)
+      for(i in 1:length(JSON)){
+        JSON[i] <- tm::stripWhitespace(JSON[i])
+        JSON[i] <- jsonlite::toJSON(JSON[i])
+        JSON[i] <- gsub('["{', '[{', JSON[i], fixed = T)
+        JSON[i] <- gsub('}"]', '}]', JSON[i], fixed = T)
+        JSON[i] <- gsub('} "]', '}]', JSON[i], fixed = T)
+        JSON[i] <- gsub('\\"', '"', JSON[i], fixed = T)
+        write(JSON[i], paste0("json",i,".json"))
       }
-      write_json(JSON, tmp)
     })
 
-    output$note <- renderText({Text$NOTE_TEXT[as.numeric(input$num)]})
+    ourceText <- eventReactive(input$click,{
+      num <<- input$num
+      # test <<- Text$NOTE_TEXT[as.numeric(input$num)]
+      Text$NOTE_TEXT[as.numeric(input$num)]
+    })
+
+    output$note <- renderText({SourceText()})
 
     errorReportSetting <- eventReactive(input$button,{
       if(is.null(input$saveJson)){
