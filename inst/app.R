@@ -62,6 +62,7 @@ shinyApp(
                                            , column(6, plotly::plotlyOutput("age"))
                                            , column(6,plotly::plotlyOutput("pie"))
                                            , column(6, plotly::plotlyOutput("date"))
+                               ))
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
                                             , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
