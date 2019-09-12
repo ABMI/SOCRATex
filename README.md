@@ -20,7 +20,8 @@ devtools::install_github("ABMI/SOCRATex")
 SOCRATex::SOCRATex()
 ```
 # Demo video
-<iframe width="640" height="360" src="https://youtu.be/F7vR6hkugY4" frameborder="0" gesture="media" allowfullscreen=""></iframe>
+[![Video Label](http://img.youtube.com/vi/F7vR6hkugY4/0.jpg)](https://youtu.be/F7vR6hkugY4)
+
 
 # Building Elastic Stack
 [Elasticsearch](https://www.elastic.co/kr/downloads/elasticsearch) and [Kibana](https://www.elastic.co/kr/downloads/kibana) are recommended to be installed.  
