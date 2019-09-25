@@ -1,6 +1,14 @@
+jsonSchemaList <<- c()
+jsonList <<- c()
+tempText <- '[{ "note_id":783223, "pathology": { "lesion": [{ "procedure": "polypectomy", "histology": [ "adenocarcinoma" ], "location": "colon, 30cm from anal verge", "differentiation": "moderately differentiated", "size(cm)": "0.7x0.5", "depth of invasion": [ "submucosa" ] }] } }]
+'
+Text <- list()
+Text$NOTE_TEXT <- tempText
+
+
 shinyApp(
   ui <- (navbarPage(theme = shinythemes::shinytheme("flatly")
-                    , "SOCRATex"
+                    , "SOCRATex",id = 'id'
                     , navbarMenu("Data Extraction"
                                  , tabPanel("DB Connection"
                                             , fluidRow(column(12
@@ -57,13 +65,7 @@ shinyApp(
                                               , prettyCheckbox('lower', "To lower", F, icon=icon("check"), plain=T)
                                               , textInput('dictionary_table', 'Dictionary table', '',  placeholder = 'ex) DBName.dbo.tableName')
                                               , actionButton('process', 'Pre-Process')
-                                              , width="3")
-                               # , mainPanel(column(6, align='center', DT::dataTableOutput("count"))
-                               #             , column(6, plotly::plotlyOutput("age"))
-                               #             , column(6,plotly::plotlyOutput("pie"))
-                               #             , column(6, plotly::plotlyOutput("date"))
-                               # )
-                               )
+                                              , width="3"))
                     , navbarMenu("Exploration"
                                  , tabPanel("Characteristics"
                                             , fluidRow(column(6, align='center', DT::dataTableOutput("count"))
@@ -144,6 +146,26 @@ shinyApp(
                                                  , actionButton('send', 'Send'))
                                )
                     )
+                    , tabPanel("Elasticsearch"
+                               , fluidRow(column(12
+                                                 , align='center'
+                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
+                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                                                 , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
+                                                 , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
+                                                 , actionButton('send', 'Send'))
+                               )
+                    )
+                    , tabPanel("Elasticsearch"
+                               , fluidRow(column(12
+                                                 , align='center'
+                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
+                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
+                                                 , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
+                                                 , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
+                                                 , actionButton('send', 'Send'))
+                               )
+                    )
   ))
 
   , server <- (function(input, output){
@@ -193,8 +215,7 @@ shinyApp(
         Text <<- read.csv(input$file1$datapath,
                           header = input$header,
                           sep = input$sep,
-                          quote = input$quote,
-                          stringsAsFactors = F)
+                          quote = input$quote)
         colnames(Text) <<- toupper(colnames(Text))
       },error = function(e) {stop(safeError(e))}
       )
@@ -313,7 +334,7 @@ shinyApp(
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
 
-    # LDA Tuning
+    # LDA tuning
     LDATuning <- eventReactive(input$Calc, {
       TopicNum <<- input$TopicNum
       By <<- input$By
@@ -353,7 +374,6 @@ shinyApp(
 
     output$LDAModel <- LDAvis::renderVis({VisSetting()})
 
-    # Sample documents from LDA results
     output$SampleTopic <- DT::renderDataTable({
       for(i in 1:input$topicNum){
         assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
@@ -364,20 +384,46 @@ shinyApp(
 
     #JSON Schema
     output$Schema <- listviewer::renderJsonedit({
-      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadSchema$datapath)){jsonList <- '{"sample":"test"}'}
-                                                          else{jsonList <- input$UploadSchema$datapath}
+      listviewer::jsonedit(jsonSchemaList <<- jsonlite::fromJSON(
+        if(is.null(input$UploadSchema$datapath)){
+          jsonSchemaList <- jsonlite::toJSON('{"sample":"test1"}')
+        }
+
+        else{
+          jsonSchemaList <- input$UploadSchema$datapath
+        }
       )
-      ,"onChange" = htmlwidgets::JS("() => {
-                                    var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Schema'})[0].editor.getText()
-                                    console.log(txt)
-                                    Shiny.onInputChange('jsedOutput',txt)}")
+      ,onChange=htmlwidgets::JS("
+                                function(){
+                                  Shiny.onInputChange(
+                                    'Schema_change',
+                                    HTMLWidgets.getInstance(document.getElementById('Schema')).editor.getText()
+                                  );
+                                }"
       )
+      )
+
     })
 
-    output$SchemaText <- renderText(input$jsedOutput)
+    observe({
+      input$UploadSchema
+      validationJson <<- jsonSchemaList
 
-    observeEvent(input$UpdateSchema,{
-      validationJson <<- input$jsedOutput
+    })
+
+    observe({
+      input$UpdateSchema
+      validationJson <<- isolate({
+        if(!is.null(input$Schema_change)){
+          if(input$Schema_change != jsonSchemaList){
+            input$Schema_change
+
+          }
+        }
+        else{
+          jsonSchemaList
+        }
+      })
     })
 
     output$DownloadSchema <- downloadHandler(
@@ -388,25 +434,49 @@ shinyApp(
 
     #JSON Structure
     output$Template <- listviewer::renderJsonedit({
-      listviewer::jsonedit(jsonList <- jsonlite::fromJSON(if(is.null(input$UploadTemplate$datapath)){
-        jsonList <- '{"sample":"test"}'
-      }
-      else{
-        jsonList <- input$UploadTemplate$datapath
-      }
+      listviewer::jsonedit(jsonList <<- jsonlite::fromJSON(
+        if(is.null(input$UploadTemplate$datapath)){
+          jsonList <- jsonlite::toJSON('{"sample":"test2"}')
+        }
+        else{
+          jsonList <- input$UploadTemplate$datapath
+        }
       )
-      ,"onChange" = htmlwidgets::JS("() => {
-                                    var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'Template'})[0].editor.getText()
-                                    console.log(txt)
-                                    Shiny.onInputChange('jsedOutput2',txt)}")
+      ,onChange=htmlwidgets::JS("
+                                function(){
+                                  Shiny.onInputChange(
+                                    'Template_change',
+                                    HTMLWidgets.getInstance(document.getElementById('Template')).editor.getText()
+                                  );
+                                }"
+      )
+
       )
     })
 
-    output$TemplateText <- renderText(input$jsedOutput2)
-
-    observeEvent(input$UpdateTemplate,{
-      validationJson2 <<- input$jsedOutput2
+    observe({
+      input$UploadTemplate
+      validationJson2 <<- jsonList
     })
+
+    observe({
+      input$UpdateTemplate
+      validationJson2 <<- isolate({
+        if(!is.null(input$Template_change)){
+          if(input$Template_change != jsonList){
+            input$Template_change
+          }
+          else{
+            jsonList
+          }
+
+        }
+        else{
+          jsonList
+        }
+      })
+    })
+
 
     output$DownloadTemplate <- downloadHandler(
       filename = function(){paste0('DownloadTemplate', ".json")}
@@ -415,11 +485,29 @@ shinyApp(
 
     # JSON Annotation
     output$annot <- listviewer::renderJsonedit({
-      listviewer::jsonedit(JSONannotation <<- validationJson2
-                           ,"onChange" = htmlwidgets::JS("() => {var txt = HTMLWidgets.findAll('.jsonedit').filter(function(item){return item.editor.container.id === 'annot'})[0].editor.getText()
-                                                         console.log(txt)
-                                                         Shiny.onInputChange('saveJson',txt)}"))
+      input$id
+      listviewer::jsonedit(JSONannotation <<- jsonlite::fromJSON(
+        if(is.null(validationJson2)){
+          JSONannotation <- jsonlite::toJSON('{"sample":"test3"}')
+        }
+        else{
+          JSONannotation <- jsonlite::toJSON(validationJson2)
+        }
+      )
+      ,onChange=htmlwidgets::JS("
+                              function(){
+                                Shiny.onInputChange(
+                                  'annot_change',
+                                  HTMLWidgets.getInstance(document.getElementById('annot')).editor.getText()
+                                );
+                              }"
+      )
+      )
     })
+
+
+
+
 
     # SourceText
     SourceText <- eventReactive(input$click,{
@@ -431,7 +519,10 @@ shinyApp(
 
     # Validation using JSON Schema
     errorReportSetting <- eventReactive(input$button,{
-      if(is.null(input$saveJson)){
+      if(is.null('validationJson')){
+        errorInfo <- stop('Json Schema Upload first!!')
+      }
+      else if(is.null(input$annot_change)){
         v <<- jsonvalidate::json_validator(validationJson)
         errorInfo <<- v(JSONannotation, verbose=TRUE, greedy=TRUE)
 
@@ -443,9 +534,9 @@ shinyApp(
         }
       }
       else{
-        JSON[as.numeric(input$num)] <<- input$saveJson
+        JSON[as.numeric(input$num)] <<- input$annot_change
         v <<- jsonvalidate::json_validator(validationJson)
-        errorInfo <<- v(input$saveJson, verbose=TRUE, greedy=TRUE)
+        errorInfo <<- v(input$annot_change, verbose=TRUE, greedy=TRUE)
         if(errorInfo[1] == TRUE){
           errorInfo[1] = 'Validate!'
         }
