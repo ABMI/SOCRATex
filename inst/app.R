@@ -1,11 +1,3 @@
-jsonSchemaList <<- c()
-jsonList <<- c()
-tempText <- '[{ "note_id":783223, "pathology": { "lesion": [{ "procedure": "polypectomy", "histology": [ "adenocarcinoma" ], "location": "colon, 30cm from anal verge", "differentiation": "moderately differentiated", "size(cm)": "0.7x0.5", "depth of invasion": [ "submucosa" ] }] } }]
-'
-Text <- list()
-Text$NOTE_TEXT <- tempText
-
-
 shinyApp(
   ui <- (navbarPage(theme = shinythemes::shinytheme("flatly")
                     , "SOCRATex",id = 'id'
@@ -127,34 +119,15 @@ shinyApp(
                                             ))
                                  , tabPanel("JSON Annotation"
                                             , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
-                                                                        actionButton("click", "Click")
-                                            )),
+                                                                        actionButton("click", "Click"))
+                                                                        , column(2, actionButton("save", "Save"))
+                                            ),
                                             fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
                                                      column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
                                                      )))
                                             , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
                                             , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                             ))
-                    )
-                    , tabPanel("Elasticsearch"
-                               , fluidRow(column(12
-                                                 , align='center'
-                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
-                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
-                                                 , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
-                                                 , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
-                                                 , actionButton('send', 'Send'))
-                               )
-                    )
-                    , tabPanel("Elasticsearch"
-                               , fluidRow(column(12
-                                                 , align='center'
-                                                 , textInput('host', 'Host', '', placeholder = 'If it is a localhost, leave it blank')
-                                                 #, textInput('port', 'Port', '', placeholder = 'ex) If it is a Local Elasticsearch, leave it blank')
-                                                 , textInput('indexName', 'Index Name', '', placeholder = 'ex) PathologyABMI')
-                                                 , textInput('filepath', 'Folder Path', '', placeholder = 'Input folder path')
-                                                 , actionButton('send', 'Send'))
-                               )
                     )
                     , tabPanel("Elasticsearch"
                                , fluidRow(column(12
@@ -177,6 +150,13 @@ shinyApp(
                                                                        , user=input$user
                                                                        , password=input$password)
       connection <<- DatabaseConnector::connect(connectionDetails)
+
+      if(!exists('jsonSchemaList')){
+        jsonSchemaList <<- c()
+      }
+      if(!exists('jsonList')){
+        jsonList <<- c()
+      }
     })
 
     observeEvent(input$connect,{
@@ -215,7 +195,8 @@ shinyApp(
         Text <<- read.csv(input$file1$datapath,
                           header = input$header,
                           sep = input$sep,
-                          quote = input$quote)
+                          quote = input$quote,
+                          stringsAsFactors = F)
         colnames(Text) <<- toupper(colnames(Text))
       },error = function(e) {stop(safeError(e))}
       )
@@ -505,9 +486,20 @@ shinyApp(
       )
     })
 
+    observeEvent(input$save, {
+      dir.create(path = paste0(getwd(), "/JSON"))
+      setwd(paste0(getwd(), "/JSON"))
 
-
-
+      for(i in 1:length(JSON)){
+        JSON[i] <- tm::stripWhitespace(JSON[i])
+        JSON[i] <- jsonlite::toJSON(JSON[i])
+        JSON[i] <- gsub('["{', '[{', JSON[i], fixed = T)
+        JSON[i] <- gsub('}"]', '}]', JSON[i], fixed = T)
+        JSON[i] <- gsub('} "]', '}]', JSON[i], fixed = T)
+        JSON[i] <- gsub('\\"', '"', JSON[i], fixed = T)
+        write(JSON[i], paste0("json",i,".json"))
+      }
+    })
 
     # SourceText
     SourceText <- eventReactive(input$click,{
