@@ -39,6 +39,14 @@
 #' @export
 
 SOCRATex <- function(){
+
+  if(exists('jsonSchemaList')==FALSE){
+    jsonSchemaList <<- c()
+  }
+  if(exists('jsonList')==FALSE){
+    jsonList <<- c()
+  }
+
   filePath <- paste0(.libPaths()[1],"/SOCRATex")
   shiny::runApp(filePath)
 }

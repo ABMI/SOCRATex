@@ -151,12 +151,6 @@ shinyApp(
                                                                        , password=input$password)
       connection <<- DatabaseConnector::connect(connectionDetails)
 
-      if(!exists('jsonSchemaList')){
-        jsonSchemaList <<- c()
-      }
-      if(!exists('jsonList')){
-        jsonList <<- c()
-      }
     })
 
     observeEvent(input$connect,{
