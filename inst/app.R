@@ -128,6 +128,7 @@ shinyApp(
                                             , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
                                             , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                             ))
+
                     )
                     , tabPanel("Elasticsearch"
                                , fluidRow(column(12

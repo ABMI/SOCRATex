@@ -13,6 +13,7 @@
 #' @import DatabaseConnector
 #' @import rJava
 #' @import SqlRender
+#' @import ldatuning
 #' @importFrom NLP ngrams
 #' @importFrom NLP words
 #' @importFrom stringi stri_count
