@@ -17,7 +17,8 @@ devtools::install_github("OHDSI/SqlRender")
 
 # Install SOCRATex
 devtools::install_github("ABMI/SOCRATex")
-SOCRATex::SOCRATex()
+library(SOCRATex)
+SOCRATex()
 ```
 # SOCRATex video
 [![Video Label](http://img.youtube.com/vi/F7vR6hkugY4/0.jpg)](https://youtu.be/F7vR6hkugY4)
