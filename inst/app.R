@@ -122,7 +122,8 @@ shinyApp(
                                                                         actionButton("click", "Click"))
                                                                         , column(2, actionButton("save", "Save"))
                                             ),
-                                            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
+                                            fluidRow(column(6, verbatimTextOutput("noteid", placeholder = T)),
+                                                     column(6, verbatimTextOutput("note", placeholder = T)),
                                                      column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
                                                      )))
                                             , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
@@ -503,6 +504,15 @@ shinyApp(
     })
 
     output$note <- renderText({SourceText()})
+
+    # NoteID
+    SourceText <- eventReactive(input$click,{
+      num <<- input$num
+      Text$NOTE_ID[as.numeric(input$num)]
+    })
+
+    output$noteid <- renderText({SourceText()})
+
 
     # Validation using JSON Schema
     errorReportSetting <- eventReactive(input$button,{
