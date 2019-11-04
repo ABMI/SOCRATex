@@ -120,13 +120,13 @@ shinyApp(
                                  , tabPanel("JSON Annotation"
                                             , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
                                                                         actionButton("click", "Click"))
-                                                                        , column(2, actionButton("save", "Save"))
+                                                                 , column(2, actionButton("save", "Save"))
                                             ),
-                                            fluidRow(column(6, verbatimTextOutput("noteid", placeholder = T)),
-                                                     column(6, verbatimTextOutput("note", placeholder = T)),
+                                            fluidRow(column(6, verbatimTextOutput("noteid", placeholder = T))),
+                                            fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
                                                      column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
                                                      )))
-                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                            , fluidRow(column(1,offset = 11, actionButton('button','Validate')))
                                             , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                             ))
 
@@ -330,9 +330,9 @@ shinyApp(
       theta <<- modeltools::posterior(fit)$topics %>% as.matrix
       vocab <- colnames(phi)
       doc_length <- c()
+      temp <- paste(Text_corpus, collapse=" ")
 
       for(i in 1:length(Text_corpus)) {
-        temp <- paste(Text_corpus, collapse=" ")
         doc_length <- c(doc_length, stringi::stri_count(temp, regex='\\S+'))
       }
 
@@ -351,6 +351,7 @@ shinyApp(
 
     output$LDAModel <- LDAvis::renderVis({VisSetting()})
 
+    # LDA Sample Documents
     output$SampleTopic <- DT::renderDataTable({
       for(i in 1:input$topicNum){
         assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
@@ -482,7 +483,9 @@ shinyApp(
       )
     })
 
+    # Saving JSON files
     observeEvent(input$save, {
+      file.path(getwd())
       dir.create(path = paste0(getwd(), "/JSON"))
       setwd(paste0(getwd(), "/JSON"))
 
@@ -506,13 +509,12 @@ shinyApp(
     output$note <- renderText({SourceText()})
 
     # NoteID
-    SourceText <- eventReactive(input$click,{
+    NoteID <- eventReactive(input$click,{
       num <<- input$num
       Text$NOTE_ID[as.numeric(input$num)]
     })
 
-    output$noteid <- renderText({SourceText()})
-
+    output$noteid <- renderText({NoteID()})
 
     # Validation using JSON Schema
     errorReportSetting <- eventReactive(input$button,{
@@ -556,7 +558,7 @@ shinyApp(
       } else{
         esConnection <- elastic::connect(errors='complete')
       }
-      jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
+      jsonToES(esconnection, indexName = input$indexName, jsonFolder = input$filepath, dropIfExist = T)
     })
   })
 )
