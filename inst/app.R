@@ -552,13 +552,13 @@ shinyApp(
     })
 
     # Elasticsearch
-    observeEvent(input$Send, {
+    observeEvent(input$send, {
       if(exists(input$host|input$port)==T){
         esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
       } else{
         esConnection <- elastic::connect(errors='complete')
       }
-      jsonToES(esconnection, indexName = input$indexName, jsonFolder = input$filepath, dropIfExist = T)
+      jsonToES(esConnection, indexName = input$indexName, jsonFolder = input$filepath, dropIfExist = T)
     })
   })
 )
