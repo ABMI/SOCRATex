@@ -311,17 +311,17 @@ shinyApp(
                          theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
     })
 
-    # LDA tuning
-    LDATuning <- eventReactive(input$Calc, {
-      TopicNum <<- input$TopicNum
-      By <<- input$By
-      metrics <<- input$metrics
-
-      tuning <<- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
-      ldatuning::FindTopicsNumber_plot(tuning)
-    })
-
-    output$TuningGraph <- renderPlot({LDATuning()})
+    # # LDA tuning
+    # LDATuning <- eventReactive(input$Calc, {
+    #   TopicNum <<- input$TopicNum
+    #   By <<- input$By
+    #   metrics <<- input$metrics
+    #
+    #   tuning <<- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
+    #   ldatuning::FindTopicsNumber_plot(tuning)
+    # })
+    #
+    # output$TuningGraph <- renderPlot({LDATuning()})
 
     # LDAvis
     VisSetting <- eventReactive(input$visButton,{
