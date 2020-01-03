@@ -4,7 +4,7 @@
 \alias{jsonToES}
 \title{jsonToES function}
 \usage{
-jsonToES(esConnection, indexName, jsonFolder, dropIfExist = F)
+jsonToES(esConnection, indexName, jsonFolder, dropIfExist = FALSE)
 }
 \arguments{
 \item{esConnection}{a connection with Elasticsearch}

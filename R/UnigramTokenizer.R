@@ -1,4 +1,4 @@
-#' UnigranTokenizer function
+#' unigranTokenizer function
 #'
 #' This is a uni-gram tokenizer for creating Document-Term Matrix
 #'
@@ -9,4 +9,4 @@
 #'
 #' @export
 
-UnigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1), paste, collapse = " "), use.names = FALSE)}
+unigramTokenizer <- function(x){unlist(lapply(NLP::ngrams(NLP::words(x), 1), paste, collapse = " "), use.names = FALSE)}

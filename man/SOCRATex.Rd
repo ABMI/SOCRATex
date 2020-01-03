@@ -7,5 +7,5 @@
 SOCRATex()
 }
 \description{
-This is a main function which can implement SOCRATex system and other functions in SOCRATex package.
+This is a main function which can implement SOCRATex application.
 }

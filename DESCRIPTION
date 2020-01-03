@@ -12,30 +12,8 @@ Depends:
   R (>= 3.4.4),
   shiny,
   shinyWidgets,
-  SnowballC,
-  tm,
-  topicmodels,
-  htmlwidgets,
-  plotly,
   rJava,
   dplyr
-Imports:
-  ldatuning,
-  DatabaseConnector,
-  SqlRender,
-  NLP,
-  modeltools,
-  stringi,
-  shinyjs,
-  shinythemes,
-  elastic,
-  jsonlite,
-  jsonvalidate,
-  listviewer,
-  LDAvis,
-  DT
-Suggests:
-  utils
 License: Apache License Version 2.0
 Encoding: UTF-8
 LazyData: true
