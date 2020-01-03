@@ -120,14 +120,16 @@ shinyApp(
                                  , tabPanel("JSON Annotation"
                                             , fluidPage(fluidRow(column(2, textInputAddon("num", label = NULL, placeholder = 1, addon = icon("info")),
                                                                         actionButton("click", "Click"))
-                                                                        , column(2, actionButton("save", "Save"))
+                                                                 , column(2, actionButton("save", "Save"))
                                             ),
+                                            fluidRow(column(6, verbatimTextOutput("noteid", placeholder = T))),
                                             fluidRow(column(6, verbatimTextOutput("note", placeholder = T)),
                                                      column(6, listviewer::jsoneditOutput("annot", height ="800px"#, width="700px"
                                                      )))
-                                            , fluidRow(column(1,offset = 11, actionButton('button','SAVE')))
+                                            , fluidRow(column(1,offset = 11, actionButton('button','Validate')))
                                             , fluidRow(column(12, verbatimTextOutput("errorReport", placeholder = T)))
                                             ))
+
                     )
                     , tabPanel("Elasticsearch"
                                , fluidRow(column(12
@@ -142,20 +144,16 @@ shinyApp(
   ))
 
   , server <- (function(input, output){
-    # Database Connection
+
+    # connecting to the Database
     DBconnection <- reactive({
-      connectionDetails <<- DatabaseConnector::createConnectionDetails(dbms='sql server'
-                                                                       , server=input$ip_address
-                                                                       , schema=input$database_schema
-                                                                       , user=input$user
-                                                                       , password=input$password)
-      connection <<- DatabaseConnector::connect(connectionDetails)
-
+      databaseConnection(server=input$ip_address
+                         , schema=input$database_schema
+                         , user=input$user
+                         , password=input$password)
     })
-
     observeEvent(input$connect,{
       DBcon <<- DBconnection()
-
       if(exists("connection")==TRUE){
         showModal(modalDialog(
           title = "Messeage", "Database connection success!!", easyClose = T, footer=modalButton("cancel"), size = "l"
@@ -163,7 +161,7 @@ shinyApp(
       }
     })
 
-    # picker
+    # Picker, showing the distinct note_type_concept_ids from the NOTE table in OMOP CDM
     output$typeOutput <- renderUI({
       if(input$type == T){
         if(exists("connection")==TRUE){
@@ -181,10 +179,9 @@ shinyApp(
       }
     })
 
-    # Data extraction using file upload
+    # OMOP CDM NOTE table formatted CSV file upload and data extraction from the file
     output$contents <- renderTable({
       req(input$file1)
-
       tryCatch({
         Text <<- read.csv(input$file1$datapath,
                           header = input$header,
@@ -203,187 +200,79 @@ shinyApp(
       }
     })
 
-
-    # preprocessing
+    # Preprocessing of the extracted text data
     observeEvent(input$process,{
       if(exists("connection")==TRUE){
         if(exists("input$resultdb")==T){
-          sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
-                            where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                              and a.person_id in (select subject_id from @resultdb where cohort_definition_id=@cohort)
-                              and note_type_concept_id in (@note_type)
-                              and a.person_id=b.person_id
-                            order by newid()"
-          sql <- SqlRender::render(sql, num = input$ReportNum, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-
-          Text <<- DatabaseConnector::querySql(connection, sql)
-          colnames(Text) <<- toupper(colnames(Text))
-          JSON <<- c()
-
-          if(exists("input$dictionary_table")==T){
-            Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
-            Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
-          } else{Text_corpus <<- Text$NOTE_TEXT}
-
-          dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-          rownames(dtm) <<- Text$NOTE_ID
+          cohortNoteExtract(num = input$ReportNum, date = input$date, result = TRUE, resultdb = input$resultdb, cohort = input$cohort, noteType = input$note_type)
+          if(exists("input$dictionary_table")==T){useDictionary(useDictionary=T)}else{useDictionary(useDictionary=F)}
         } else{
-          sql <- "select top @num a.*, b.YEAR_OF_BIRTH, b.GENDER_CONCEPT_ID from NOTE a, PERSON b
-                            where (left(note_date, 4) >= @min and left(note_date, 4) <= @max)
-                              and note_type_concept_id in (@note_type)
-                              and a.person_id=b.person_id
-                            order by newid()"
-          sql <- SqlRender::render(sql, num = input$ReportNum, min=input$date[1], max=input$date[2], resultdb=input$resultdb, cohort=input$cohort, note_type=input$note_type)
-
-          Text <<- DatabaseConnector::querySql(connection, sql)
-          JSON <<- c()
-
-          if(exists("input$dictionary_table")==T){
-            Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
-            Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
-          } else{Text_corpus <<- Text$NOTE_TEXT}
-
-          dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-          rownames(dtm) <<- Text$NOTE_ID
+          cohortNoteExtract(num = input$ReportNum, date = input$date, result = FALSE, noteType = input$note_type)
+          if(exists("input$dictionary_table")==T){useDictionary(useDictionary=T)}else{useDictionary(useDictionary=F)}
         }} else{
-          JSON <<- c()
-          Text <- Text %>% filter(NOTE_TYPE_CONCEPT_ID %in% input$note_type)
-          Text <- Text %>% filter(substring(NOTE_DATE, 1, 4) >= input$date[1] & substring(NOTE_DATE, 1, 4) <= input$date[2])
-          Text <<- head(Text, input$ReportNum)
-          Text_corpus <<- Text$NOTE_TEXT ## Why it's not working...?
-
-          dtm <<- preprocess(text = Text_corpus, english = input$english, whitespace = input$whitespace, stopwords = input$stopwords
-                             , number = input$number, punc = input$punc, stem = input$stem, lower = input$lower)
-          rownames(dtm) <<- Text$NOTE_ID
+          noteExtract(Text = Text, num = input$ReportNum, date = input$date, noteType = input$note_type)
+          if(exists("input$dictionary_table")==T){useDictionary(useDictionary=T)}else{useDictionary(useDictionary=F)}
         }
+
+      dtm <<- preProcess(text = Text_corpus,
+                         english = input$english,
+                         whitespace = input$whitespace,
+                         stopwords = input$stopwords,
+                         number = input$number,
+                         punc = input$punc,
+                         stem = input$stem,
+                         lower = input$lower)
+      rownames(dtm) <<- Text$NOTE_ID
 
       if(exists("dtm")==TRUE){
         showModal(modalDialog(title="Message", "Preprocessing has completed!!", easyClose = T, footer = modalButton("cancel"), size = "l"))
       }
     })
 
-    # personTable
+    # Drawing table with basic information of the data
     output$count <- DT::renderDataTable({
-      person <- Text %>% select(PERSON_ID) %>% distinct() %>% count()
-      note <- Text %>% select(NOTE_ID) %>% count()
-
-      personTable <- as.data.frame(rbind(person, note))
-
-      rownames(personTable) <- c("Person", "Note")
-      colnames(personTable) <- c("Count")
-
-      personTable
+      drawPersonTable(Text = Text)
     })
 
-    # pie chart
+    # Drawing the proportion of the note types
     output$pie <- plotly::renderPlotly({
-      pie <- Text %>% group_by(NOTE_TYPE_CONCEPT_ID) %>% select(NOTE_ID) %>% count(NOTE_TYPE_CONCEPT_ID)
-      pie <- as.data.frame(pie)
-      colnames(pie) <- c("NoteType", "Count")
-
-      plotly::plot_ly(pie, labels = ~pie$NoteType, values=pie$Count, type="pie") %>% layout(title="The Proportions of Note Types of Data")
+      drawPieChart(Text = Text)
     })
 
-    # Age
+    # Drawing age graph of patients in data
     output$age <- plotly::renderPlotly({
-      age <- Text %>% group_by(YEAR_OF_BIRTH, GENDER_CONCEPT_ID) %>% select(YEAR_OF_BIRTH, GENDER_CONCEPT_ID) %>% count(YEAR_OF_BIRTH, GENDER_CONCEPT_ID)
-      age <-as.data.frame(age)
-      colnames(age) <- c("BirthYear", "Gender", "Count")
-      age$Gender <- factor(age$Gender)
-
-      plotly::ggplotly(ggplot(age, aes(x=BirthYear, y=Count, color=Gender))
-                       + geom_line(size=1) + theme_minimal() + scale_color_manual(values = c("#3300FF", "#FF9933")))
+      drawAgeGraph(Text = Text)
     })
 
-    # date
+    # Draw note dates of the data
     output$date <- plotly::renderPlotly({
-      Text$NOTE_DATE <- Text$NOTE_DATE %>% substring(1, 4)
-      date <- Text %>% group_by(NOTE_DATE, NOTE_TYPE_CONCEPT_ID) %>% select(NOTE_DATE, NOTE_TYPE_CONCEPT_ID) %>% count(NOTE_DATE, NOTE_TYPE_CONCEPT_ID)
-      date <- as.data.frame(date)
-      date$NOTE_TYPE_CONCEPT_ID <- factor(date$NOTE_TYPE_CONCEPT_ID)
-      colnames(date) <- c("NoteDate", "NoteType", "Count")
-
-      plotly::ggplotly(ggplot(date, aes(x=NoteDate, y=Count, fill=NoteType)) + geom_bar(stat = "identity", position = "stack") +
-                         theme(axis.text.x = element_text(angle=45)) + scale_fill_brewer(palette = "Set1"))
+      drawNotedateGraph(Text = Text)
     })
 
-    # LDA tuning
+    # To find the optimal number of the LDA analysis, drawing perplexity graph is necessary
     LDATuning <- eventReactive(input$Calc, {
-      TopicNum <<- input$TopicNum
-      By <<- input$By
-      metrics <<- input$metrics
-
-      tuning <<- ldatuning::FindTopicsNumber(dtm, topics = seq(from = input$TopicNum[1], to = input$TopicNum[2], by = input$By), metrics = input$metrics, method = "Gibbs")
-      ldatuning::FindTopicsNumber_plot(tuning)
+      drawOptimalTopicNumber(dtm, TopicNum = input$TopicNum, By = input$By, metrics = input$metrics)
     })
-
     output$TuningGraph <- renderPlot({LDATuning()})
 
-    # LDAvis
+    # LDAvis is an interactive shiny application of the LDA analysis allowing visualozaion of the topics relationships
     VisSetting <- eventReactive(input$visButton,{
-      fit <- topicmodels::LDA(dtm, k=input$topicNum, method='Gibbs', control=list(iter=input$learningNum, alpha=input$alphaNum))
-      phi <- modeltools::posterior(fit)$terms %>% as.matrix
-      theta <<- modeltools::posterior(fit)$topics %>% as.matrix
-      vocab <- colnames(phi)
-      doc_length <- c()
-
-      for(i in 1:length(Text_corpus)) {
-        temp <- paste(Text_corpus, collapse=" ")
-        doc_length <- c(doc_length, stringi::stri_count(temp, regex='\\S+'))
-      }
-
-      temp_frequency <- as.matrix(dtm)
-      freq_matrix <- data.frame(ST=colnames(temp_frequency),
-                                Freq=colSums(temp_frequency))
-      rm(temp_frequency)
-
-      json_lda <- LDAvis::createJSON(phi=phi,
-                                     theta=theta,
-                                     vocab=vocab,
-                                     doc.length=doc_length,
-                                     term.frequency=freq_matrix$Freq)
-      json_lda
+      shinyLDA(dtm = dtm, k = input$topicNum, iter = input$learningNum, alpha = input$alphaNum)
     })
-
     output$LDAModel <- LDAvis::renderVis({VisSetting()})
 
+    # showing sample documents which have the highest probabilities of the LDA topics helps the users to understand their corpus
     output$SampleTopic <- DT::renderDataTable({
-      for(i in 1:input$topicNum){
-        assign(paste0("Sample", i), Text %>% mutate(TOPIC = paste0("TOPIC",i)) %>% select(TOPIC, NOTE_ID, NOTE_TEXT) %>% filter(NOTE_ID %in% names(head(sort(theta[,i], decreasing = T), input$sample))))
-        assign(paste0("Sample",1), bind_rows(get(paste0("Sample",1)), get(paste0("Sample",i))))
-      }
-      return(unique(Sample1))
+      topicSample(Text = Text, topic = input$topicNum, num = input$sample)
     })
 
-    #JSON Schema
+    # This json editor is for editing and savinf json schema. It will be used for validation of the annotation process
     output$Schema <- listviewer::renderJsonedit({
-      listviewer::jsonedit(jsonSchemaList <<- jsonlite::fromJSON(
-        if(is.null(input$UploadSchema$datapath)){
-          jsonSchemaList <- jsonlite::toJSON('{"sample":"test1"}')
-        }
-
-        else{
-          jsonSchemaList <- input$UploadSchema$datapath
-        }
-      )
-      ,onChange=htmlwidgets::JS("
-                                function(){
-                                  Shiny.onInputChange(
-                                    'Schema_change',
-                                    HTMLWidgets.getInstance(document.getElementById('Schema')).editor.getText()
-                                  );
-                                }"
-      )
-      )
-
+      jsonEditor(filePath = input$UploadSchema$datapath)
     })
-
     observe({
       input$UploadSchema
       validationJson <<- jsonSchemaList
-
     })
 
     observe({
@@ -392,7 +281,6 @@ shinyApp(
         if(!is.null(input$Schema_change)){
           if(input$Schema_change != jsonSchemaList){
             input$Schema_change
-
           }
         }
         else{
@@ -406,27 +294,9 @@ shinyApp(
       , content = function(file){write(jsonlite::toJSON(validationJson), file)}
     )
 
-
-    #JSON Structure
+    # This editor is for editing and saving JSON structure which will be used for annotation
     output$Template <- listviewer::renderJsonedit({
-      listviewer::jsonedit(jsonList <<- jsonlite::fromJSON(
-        if(is.null(input$UploadTemplate$datapath)){
-          jsonList <- jsonlite::toJSON('{"sample":"test2"}')
-        }
-        else{
-          jsonList <- input$UploadTemplate$datapath
-        }
-      )
-      ,onChange=htmlwidgets::JS("
-                                function(){
-                                  Shiny.onInputChange(
-                                    'Template_change',
-                                    HTMLWidgets.getInstance(document.getElementById('Template')).editor.getText()
-                                  );
-                                }"
-      )
-
-      )
+      jsonTemplateEditor(filePath = input$UploadTemplate$datapath)
     })
 
     observe({
@@ -444,7 +314,6 @@ shinyApp(
           else{
             jsonList
           }
-
         }
         else{
           jsonList
@@ -452,13 +321,12 @@ shinyApp(
       })
     })
 
-
     output$DownloadTemplate <- downloadHandler(
       filename = function(){paste0('DownloadTemplate', ".json")}
       , content = function(file){write(jsonlite::toJSON(validationJson2), file)}
     )
 
-    # JSON Annotation
+    # This editor is the final editor and is for annotation process. It uses previously defined JSON schema and structure.
     output$annot <- listviewer::renderJsonedit({
       input$id
       listviewer::jsonedit(JSONannotation <<- jsonlite::fromJSON(
@@ -476,34 +344,30 @@ shinyApp(
                                   HTMLWidgets.getInstance(document.getElementById('annot')).editor.getText()
                                 );
                               }"
-      )
-      )
+      ))
     })
 
+    # save annotated Json object into the individual Json files.
     observeEvent(input$save, {
-      dir.create(path = paste0(getwd(), "/JSON"))
-      setwd(paste0(getwd(), "/JSON"))
-
-      for(i in 1:length(JSON)){
-        JSON[i] <- tm::stripWhitespace(JSON[i])
-        JSON[i] <- jsonlite::toJSON(JSON[i])
-        JSON[i] <- gsub('["{', '[{', JSON[i], fixed = T)
-        JSON[i] <- gsub('}"]', '}]', JSON[i], fixed = T)
-        JSON[i] <- gsub('} "]', '}]', JSON[i], fixed = T)
-        JSON[i] <- gsub('\\"', '"', JSON[i], fixed = T)
-        write(JSON[i], paste0("json",i,".json"))
-      }
+      saveJson(JSON = JSON)
     })
 
-    # SourceText
-    SourceText <- eventReactive(input$click,{
+    # sourceText shows the original clinical reports(note_text of NOTE table) extracted before
+    sourceText <- eventReactive(input$click,{
       num <<- input$num
       Text$NOTE_TEXT[as.numeric(input$num)]
     })
 
-    output$note <- renderText({SourceText()})
+    output$note <- renderText({sourceText()})
 
-    # Validation using JSON Schema
+    # noteId shows NOTE_ID of the NOTE table which is previously extracted
+    noteId <- eventReactive(input$click,{
+      num <<- input$num
+      Text$NOTE_ID[as.numeric(input$num)]
+    })
+    output$noteid <- renderText({noteId()})
+
+    # This is the validation prostep using previously defined JSON schema.
     errorReportSetting <- eventReactive(input$button,{
       if(is.null('validationJson')){
         errorInfo <- stop('Json Schema Upload first!!')
@@ -538,14 +402,14 @@ shinyApp(
       as.character(errorReportSetting())
     })
 
-    # Elasticsearch
-    observeEvent(input$Send, {
+    # Sending individual Json files into the activated Elasticsearch. This process can be performed separately  from the other processes before.
+    observeEvent(input$send, {
       if(exists(input$host|input$port)==T){
         esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
       } else{
         esConnection <- elastic::connect(errors='complete')
       }
-      jsonToES(connection, jsonFolder = input$filepath, dropIfExist = T)
+      jsonToES(esConnection, indexName = input$indexName, jsonFolder = input$filepath, dropIfExist = T)
     })
   })
 )

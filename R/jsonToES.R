@@ -11,21 +11,33 @@
 #'
 #' @export
 
-jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = F){
-  json_list<- list.files(jsonFolder,pattern = "*.json$",full.names = T)
-  dataset <- lapply(json_list, function(json) {fromJSON(json)})
+jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = FALSE){
+  json_list<- list.files(json_path,pattern = "*.json$",full.names = T)
+  dataset <- sapply(json_list, read_json)
+
   if(elastic::index_exists(esConnection,indexName)){
     if(dropIfExist){
-      elastic::index_delete(esConnection,indexName)
+      elastic::index_delete(esConnection, indexName)
+      elastic::index_create(conn = esConnection,
+                            index = indexName,
+                            body = NULL,
+                            raw = F,
+                            verbose = T)
     }
   }
   else{
-    elastic::index_create(esConnection, indexName)
+    elastic::index_create(conn = esConnection,
+                          index = indexName,
+                          body = NULL,
+                          raw = F,
+                          verbose = T)
   }
-
   for(i in 1:length(dataset)){
     print(paste0(i,"/",length(dataset)," bulk uploading..."))
-    elastic::docs_bulk(esConnection,dataset[[i]],indexName)
+    elastic::docs_bulk(conn = esConnection,
+                       x = dataset[i],
+                       index = indexName,
+                       config = c(httr::verbose()))
   }
   print("Jobs done!")
 }

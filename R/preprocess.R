@@ -1,4 +1,4 @@
-#' Preprocess function
+#' preProcess
 #'
 #' This is a preprocessing function which can perform basic proprocessing rules.
 #'
@@ -15,7 +15,7 @@
 #'
 #' @export
 
-preprocess <- function(text, english = F, whitespace = F, stopwords = F, number = F, punc = F, stem = F, lower = F){
+preProcess <- function(text, english = F, whitespace = F, stopwords = F, number = F, punc = F, stem = F, lower = F){
 
   if(english == T){Text_corpus <- gsub('[^[:ascii:]]', '', Text_corpus, perl = T)}
   Text_corpus <- tm::VCorpus(tm::VectorSource(Text_corpus))
@@ -27,7 +27,7 @@ preprocess <- function(text, english = F, whitespace = F, stopwords = F, number 
   if(lower == T){Text_corpus <- tm::tm_map(Text_corpus, tolower)}
 
   Text_corpus <- tm::tm_map(Text_corpus, PlainTextDocument)
-  DTM <- tm::DocumentTermMatrix(Text_corpus, control = list(wordLength=c(2,Inf), tokenizer = UnigramTokenizer))
+  dtm <<- tm::DocumentTermMatrix(Text_corpus, control = list(wordLength=c(2,Inf), tokenizer = unigramTokenizer))
 
-  return(DTM)
+  return(dtm)
 }
