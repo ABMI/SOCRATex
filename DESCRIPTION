@@ -13,7 +13,19 @@ Depends:
   shiny,
   shinyWidgets,
   rJava,
-  dplyr
+  dplyr,
+  DatabaseConnector,
+  LDAvis,
+  elastic,
+  htmlwidgets,
+  topicmodels,
+  Rmpfr,
+  ldatuning,
+  listviewer,
+  plotly,
+  DT,
+  shinyjs,
+  shinythemes
 License: Apache License Version 2.0
 Encoding: UTF-8
 LazyData: true
