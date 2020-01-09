@@ -404,7 +404,7 @@ shinyApp(
 
     # Sending individual Json files into the activated Elasticsearch. This process can be performed separately  from the other processes before.
     observeEvent(input$send, {
-      if(exists(input$host)==T){
+      if(exists("input$host")==T){
         esConnection <- elastic::connect(host = input$host, errors='complete') # port = input$port
       } else{
         esConnection <- elastic::connect(errors='complete')
