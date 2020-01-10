@@ -14,9 +14,8 @@
 
 jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = F){
   json_list<- list.files(jsonFolder, pattern = "*.json$",full.names = T)
-  #####해당 부분만 수정해주시면 되겠습니다.
   dataset <- sapply(json_list, read_json)
-  #####
+
   if(elastic::index_exists(esConnection, indexName)){
     if(dropIfExist){
       elastic::index_delete(esConnection, indexName)
