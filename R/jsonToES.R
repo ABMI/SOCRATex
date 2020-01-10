@@ -3,6 +3,7 @@
 #' This is a function to send JSON documents to Elasticsearch
 #'
 #' @import elastic
+#' @import jsonlite
 #'
 #' @param esConnection  a connection with Elasticsearch
 #' @param indexName     an index name to send Elasticsearch
@@ -11,11 +12,12 @@
 #'
 #' @export
 
-jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = FALSE){
-  json_list<- list.files(json_path,pattern = "*.json$",full.names = T)
+jsonToES <- function(esConnection, indexName, jsonFolder, dropIfExist = F){
+  json_list<- list.files(jsonFolder, pattern = "*.json$",full.names = T)
+  #####해당 부분만 수정해주시면 되겠습니다.
   dataset <- sapply(json_list, read_json)
-
-  if(elastic::index_exists(esConnection,indexName)){
+  #####
+  if(elastic::index_exists(esConnection, indexName)){
     if(dropIfExist){
       elastic::index_delete(esConnection, indexName)
       elastic::index_create(conn = esConnection,
