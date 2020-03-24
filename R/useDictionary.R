@@ -9,7 +9,10 @@
 
 useDictionary <- function(useDictionary = FALSE){
   if(useDictionary==T){
-    Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
+    # Dict <- DatabaseConnector::dbReadTable(connection, input$dictionary_table)
+    dicPath <- paste0(getwd(),"/dictionary.txt")
+    read.table(dicPath, sep = "\t")
+
     Text_corpus <<- dictionary(Dict, Text$NOTE_TEXT)
   } else{
     Text_corpus <<- Text$NOTE_TEXT
