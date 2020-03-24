@@ -1,0 +1,45 @@
+bxx	biopsy
+anefol	anefol
+mida	midaxolam
+midazimlam	midazolam
+pethine	pethidine
+pethdine	pethidine
+ac	anal verge
+t-colon	transverse colon
+s-colon	sigmoid colon
+a-colon	ascending colon
+d-colon	descending colon
+bowel prep.	bowel preparation
+prox	proximal
+asc	ascending
+asx	ascending
+t-ileum	terminal ileum
+hf	hepatic flexure
+sdj	sigmoid descending junction
+dsc	descending colon
+pac	proximal ascending colon
+mtc	mid transverse colon
+ti	terminal ileum
+int.	intestine
+peth	pethidine
+sd junction	sigmoid descending junction
+<root><header><T>EMR</T><MN>	 
+</MN><AN>Biopsy</AN><TD>	 
+</MN><AN>Gross</AN><TD>	 
+</TD></header>EMR<header><T>EMR</T><MN>	 
+</TD></header></root>	 
+</TD></header><header><T>EMR</T><MN>	 
+&lt;	 
+&gt;	 
+(labelled as \".+\")|(labelled as \"\")	 
+[[a-zA-Z][0-9]+-[0-9]+]	 
+([a-zA-Z][0-9]+-[0-9]+.+)	 
+[0-9]+/[0-9]+/[0-9]+	 
+//[a-zA-Z]+	 
+<[/?a-zA-Z]+>	 
+EMRBiopsyBiopsy	 
+EMRGrossGross	 
+rootheadertemrtmngrossmnangrossantdresult	 
+rootheadertemrtmnbiopsymnanbiopsyantdresult	 
+tdheaderheadertemrtmngrossmnangrossantdresult	 
+tdheaderheadertemrtmnbiopsymnanbiopsyantdresult	 
