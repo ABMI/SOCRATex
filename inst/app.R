@@ -7,9 +7,17 @@ shinyApp(
                                                               , align='center'
                                                               , shinyjs::useShinyjs()
                                                               , textInput('ip_address', 'IP address', '', placeholder = 'ex) ???.???.???.???')
+                                                              , shinyWidgets::pickerInput("dbms", label="Database Management System",
+                                                                                          choices=c("sql server", "oracle", "postgresql", "redshift", "pdw", "netezza", "bigquery", "sqlite"),
+                                                                                         multiple=F)
+                                                              # , shinyWidgets::pickerInput("metrics", label="Evulation Methods", choices = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014")
+                                                              #                             , options = list('actions-box'=T, size=10, 'selected-text-format'="count>3")
+
                                                               , textInput('database_schema', 'Database schema', '', placeholder = 'ex) DBName')
                                                               , textInput('user', 'User ID', '', placeholder = 'ex) Admin')
                                                               , passwordInput('password', 'Password', '', placeholder = 'ex) 1234')
+                                                              , textInput('port', 'Port', placeholder = 'ex) 9200')
+                                                              , textInput('oracle', 'Oracle Driver', '', placeholder = 'ex) thin')
                                                               , textInput('resultdb', 'Result DB', '', placeholder = 'ex) WEBAPI_CDM.results')
                                                               , textInput('cohort', 'Cohort ID', '', placeholder = 'ex) 123')
                                                               , actionButton('connect', 'Connect'))
