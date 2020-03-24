@@ -9,8 +9,10 @@
 #' @import DatabaseConnector
 #'
 #' @export
-databaseConnection <- function(server, user, password, schema){
-  connectionDetails <<- DatabaseConnector::createConnectionDetails(dbms='sql server'
+databaseConnection <- function(dbms, server, port, user, password, schema, oracleDriver){
+  connectionDetails <<- DatabaseConnector::createConnectionDetails(dbms=dbms
+                                                                  , port = port
+                                                                  , oracleDriver = oracleDriver
                                                                   , server=server
                                                                   , schema=schema
                                                                   , user=user
